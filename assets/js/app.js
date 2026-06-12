@@ -466,9 +466,8 @@ function openExportModal(id, name, allowedAddress) {
     exportPeerName = name;
     exportPeerIp = allowedAddress.split('/')[0];
 
-    // Calculate DNAT port: 30000 + third*1000 + fourth
     const parts = exportPeerIp.split('.');
-    const dnatPort = 30000 + parseInt(parts[2]) * 1000 + parseInt(parts[3]);
+    const dnatPort = AppConfig.dnatBase + parseInt(parts[2]) * AppConfig.dnatMultiplier + parseInt(parts[3]);
 
     document.getElementById('exportIp').innerText = exportPeerIp;
     document.getElementById('exportPort').innerText = dnatPort;
@@ -583,7 +582,7 @@ function switchExportTab(tab) {
 /* ── Clipboard ──────────────────────────────────────────────── */
 function copyDnatPort(ip) {
     const parts = ip.split('.');
-    const dnatPort = 30000 + parseInt(parts[2]) * 1000 + parseInt(parts[3]);
+    const dnatPort = AppConfig.dnatBase + parseInt(parts[2]) * AppConfig.dnatMultiplier + parseInt(parts[3]);
     navigator.clipboard.writeText(dnatPort.toString())
         .then(() => showToast(t('js.dnat_copied').replace('%d', dnatPort)))
         .catch(() => showToast(t('js.copy_failed'), true));

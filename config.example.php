@@ -27,4 +27,10 @@ return [
     // Client Connection Template Settings
     'endpoint' => 'server.example.com:13231',
     'client_allowed_ips' => '10.0.0.0/24,192.168.1.0/24',
+
+    // DNAT Port Mapping (Winbox access behind WireGuard)
+    // Formula: dnat_base + third_octet * dnat_multiplier + fourth_octet
+    // Adjust these if the default range (30000-65535) doesn't fit your subnet
+    'dnat_base' => 30000,
+    'dnat_multiplier' => 1000,
 ];

@@ -5,6 +5,14 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 ![Dashboard Screenshot](screenshots/Dashboard.png)
 ![Export Modal Screenshot](screenshots/Export.png)
 
+> **Disclaimer:** Questo software è fornito "cos com'è", senza alcuna garanzia. L'autore non si assume alcuna responsabilità per danni diretti o indiretti derivanti dall'uso di questo strumento. Usalo a tuo rischio e pericolo.
+>
+> **This software is provided "as is" without warranty of any kind. The author assumes no responsibility for any direct or indirect damages arising from its use. Use at your own risk.**
+
+> **⚠️ Attenzione / Warning:** Questo strumento è progettato per l'uso in **reti locali fidate**. Se esposto su Internet, è necessario implementare misure di sicurezza aggiuntive come autenticazione HTTP, firewall, reverse proxy con SSL, rate limiting, e monitoraggio degli accessi. Questo script non fornisce protezione intrinseca contro attacchi esterni.
+>
+> **This tool is designed for use on **trusted local networks**. If exposed to the Internet, additional security measures such as HTTP authentication, firewall, SSL reverse proxy, rate limiting, and access monitoring must be implemented. This script does not provide built-in protection against external attacks.**
+
 ## Features
 
 - **Web Dashboard** — List, create, edit, delete WireGuard peers via browser
@@ -87,6 +95,8 @@ See `config.example.php` for all available options:
 - **Private keys are never stored** on the server after the modal is closed
 - **IP restriction** via `.htaccess` (default: `192.168.111.x`)
 - **display_errors disabled** in production — no PHP error leakage
+- **Solo reti locali** — non esporre su Internet senza misure aggiuntive
+- **Intended for LAN use only** — do not expose to the Internet without additional security layers
 
 ## Project Structure
 
