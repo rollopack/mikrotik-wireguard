@@ -22,6 +22,6 @@ return [
     'server_ip' => '10.0.0.1',
 
     // Client Connection Template Settings
-    'endpoint' => 'your-server.example.com:13231',
+    'endpoint' => 'server.example.com:13231',
     'client_allowed_ips' => '10.0.0.0/24,192.168.1.0/24',
 ];

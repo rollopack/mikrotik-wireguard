@@ -1,6 +1,6 @@
 # MikroTik WireGuard Peer Manager
 
-A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik CHR RouterOS 7. Features automatic IP allocation, X25519 key generation, and client configuration export.
+A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik RouterOS. Features automatic IP allocation, X25519 key generation, and client configuration export.
 
 ## Features
 
