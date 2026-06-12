@@ -5,6 +5,13 @@
 
 'use strict';
 
+/* ── API Helper ─────────────────────────────────────────────── */
+function apiUrl(action) {
+    let url = 'src/api.php?action=' + encodeURIComponent(action);
+    if (AppConfig.isDemo) url += '&demo';
+    return url;
+}
+
 /* ── State ──────────────────────────────────────────────────── */
 let allPeers = [];
 let peerToDeleteId = null;
@@ -42,7 +49,7 @@ async function loadPeers() {
     const loader = document.getElementById('tableLoader');
     loader.classList.add('active');
     try {
-        const res = await fetch('src/api.php?action=get_peers');
+        const res = await fetch(apiUrl('get_peers'));
         const data = await res.json();
         if (data.success) {
             allPeers = data.peers;
@@ -64,7 +71,7 @@ async function refreshPeers() {
     const tableWrapper = document.querySelector('.table-wrapper');
     const savedScroll = tableWrapper?.scrollTop || 0;
     try {
-        const res = await fetch('src/api.php?action=get_peers');
+        const res = await fetch(apiUrl('get_peers'));
         const data = await res.json();
         if (data.success) {
             allPeers = data.peers;
@@ -310,7 +317,7 @@ async function submitAddPeer(event) {
     submitBtn.disabled = true;
 
     try {
-        const res = await fetch('src/api.php?action=add_peer', {
+        const res = await fetch(apiUrl('add_peer'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: nameInput.value })
@@ -395,7 +402,7 @@ async function submitEditPeer(event) {
     const id = document.getElementById('editPeerId').value;
     const name = document.getElementById('editPeerName').value;
     try {
-        const res = await fetch('src/api.php?action=update_peer', {
+        const res = await fetch(apiUrl('update_peer'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, name })
@@ -433,7 +440,7 @@ function closeDeleteModal() {
 
 async function submitDeletePeer(id) {
     try {
-        const res = await fetch('src/api.php?action=delete_peer', {
+        const res = await fetch(apiUrl('delete_peer'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id })
@@ -530,7 +537,7 @@ async function regenerateKey() {
     btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Rigenerazione...`;
 
     try {
-        const res = await fetch('src/api.php?action=regenerate_key', {
+        const res = await fetch(apiUrl('regenerate_key'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: exportPeerId })
