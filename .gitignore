@@ -1,0 +1,17 @@
+# ── Sensitive Configuration ──────────────────────────────────
+config.php
+
+# ── Migration data & scripts (local only) ────────────────────
+temp/
+
+# ── Byte-compiled / optimized / DLL files ─────────────────────
+__pycache__/
+*.py[codz]
+*$py.class
+
+# ── OS / Editor ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
