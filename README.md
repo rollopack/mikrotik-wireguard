@@ -1,6 +1,9 @@
 # MikroTik WireGuard Peer Manager
 
-A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik RouterOS. Features automatic IP allocation, X25519 key generation, and client configuration export.
+A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik RouterOS 7 CHR. Features automatic IP allocation, X25519 key generation, client configuration export, and full i18n support (Italian/English).
+
+![Dashboard Screenshot](screenshots/Dashboard.png)
+![Export Modal Screenshot](screenshots/Export.png)
 
 ## Features
 
@@ -9,13 +12,41 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 - **X25519 Key Generation** — Uses `libsodium` for cryptographic key pairs
 - **Client Config Export** — Download `.conf` (WireGuard) or `.rsc` (RouterOS script)
 - **Key Regeneration** — Rotate keys without deleting/recreating peers
+- **DNAT Port Display** — Shows Winbox DNAT port for each peer (formula: `30000 + third_octet * 1000 + fourth_octet`)
+- **Internationalization** — Italian and English UI, switchable via `config.php`
 - **Demo Mode** — Fully functional demo using PHP sessions, no router required
+- **Live Status** — Auto-refresh every 10s, real-time handshake/traffic monitoring
 
 ## Requirements
 
-- PHP 8.0+ with `ext-sodium` and `ext-json`
-- Web server (Apache, Nginx, etc.)
-- MikroTik RouterOS 7 with REST API enabled (`/ip/service/set www-ssl`)
+### PHP
+
+| Component | Required | Notes |
+|-----------|----------|-------|
+| PHP | 8.0+ | |
+| `ext-sodium` | Yes | For X25519 key generation (`sodium_crypto_scalarmult_base`) |
+| `ext-json` | Yes | For JSON encoding/decoding |
+| `ext-mbstring` | Recommended | For multibyte string handling |
+| `allow_url_fopen` | `On` | Required by `file_get_contents()` for REST API calls |
+
+### MikroTik RouterOS 7 CHR
+
+| Component | Required | Notes |
+|-----------|----------|-------|
+| RouterOS | 7.0+ | REST API requires RouterOS 7 |
+| REST API | Enabled | `/ip/service/set www-ssl disabled=no port=443` |
+| Firewall | Open port 443 | From the dashboard server to the CHR |
+| WireGuard | Interface created | e.g. `WireGuard-ResNovae` |
+| SSL Certificate | Self-signed OK | Set `ssl_verify: false` in config |
+
+### Web Server (Dashboard Host)
+
+| Component | Notes |
+|-----------|-------|
+| Apache / Nginx | Any with PHP-FPM |
+| PHP | 8.0+ with extensions above |
+| Network access | To CHR REST API on port 443 |
+| .htaccess support | For IP restriction (optional) |
 
 ## Quick Start
 
@@ -38,12 +69,13 @@ See `config.example.php` for all available options:
 
 | Key | Description |
 |-----|-------------|
+| `lang` | UI language (`it` or `en`) |
 | `host` | Router IP or hostname (e.g. `https://192.168.88.1`) |
 | `username` | Router username |
 | `password` | Router password |
 | `ssl_verify` | Verify SSL certificate (`false` for self-signed) |
 | `interface` | WireGuard interface name on the router |
-| `subnet` | WireGuard subnet in CIDR (e.g. `10.0.0.0/24`) |
+| `subnet` | WireGuard subnet in CIDR (e.g. `3.0.0.0/21`) |
 | `server_ip` | Server IP inside the subnet |
 | `endpoint` | Public endpoint for client connections (e.g. `vpn.example.com:13231`) |
 | `client_allowed_ips` | Allowed IPs in generated client configs |
@@ -54,20 +86,33 @@ See `config.example.php` for all available options:
 - **Demo mode** — activates when password is `password` or `?demo` is in the URL
 - **Private keys are never stored** on the server after the modal is closed
 - **IP restriction** via `.htaccess` (default: `192.168.111.x`)
+- **display_errors disabled** in production — no PHP error leakage
 
 ## Project Structure
 
 ```
-├── config.example.php      # Configuration template
-├── index.php               # Dashboard UI
-├── src/
-│   ├── api.php                    # AJAX API endpoints
-│   ├── WireGuardManager.php       # Business logic
-│   ├── MikrotikRestClient.php     # REST API client (file_get_contents)
-│   └── DemoWireGuardManager.php   # Session-based mock for demo mode
+├── config.php               # Router credentials (gitignored)
+├── config.example.php       # Configuration template
+├── index.php                # Dashboard UI
+├── Dashboard.png            # Screenshot (root, moved to screenshots/)
+├── Export.png               # Screenshot (root, moved to screenshots/)
+├── screenshots/
+│   ├── Dashboard.png
+│   └── Export.png
 ├── assets/
-│   ├── css/app.css
-│   └── js/app.js
+│   ├── css/
+│   │   └── app.css
+│   └── js/
+│       └── app.js
+├── src/
+│   ├── api.php                      # AJAX API endpoints
+│   ├── WireGuardManager.php         # Business logic
+│   ├── MikrotikRestClient.php       # REST API client (file_get_contents)
+│   ├── DemoWireGuardManager.php     # Session-based mock for demo mode
+│   ├── i18n.php                     # Translation helpers
+│   └── lang/
+│       ├── it.php                   # Italian strings
+│       └── en.php                   # English strings
 └── tests/
     ├── run_tests.php
     └── WireGuardManagerTest.php

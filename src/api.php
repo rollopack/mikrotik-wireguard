@@ -6,8 +6,10 @@ ini_set('display_errors', 0);
 require_once __DIR__ . '/MikrotikRestClient.php';
 require_once __DIR__ . '/WireGuardManager.php';
 require_once __DIR__ . '/DemoWireGuardManager.php';
+require_once __DIR__ . '/i18n.php';
 
 $config = require __DIR__ . '/../config.php';
+$lang = loadLanguage($config['lang'] ?? 'en');
 
 $isDemoMode = ($config['password'] === 'password' || isset($_GET['demo']));
 $manager = null;
@@ -34,7 +36,7 @@ if ($isDemoMode) {
 header('Content-Type: application/json');
 
 if (!isset($_GET['action'])) {
-    echo json_encode(['success' => false, 'error' => 'Azione non specificata.']);
+    echo json_encode(['success' => false, 'error' => t($lang, 'api.action_required')]);
     exit;
 }
 
@@ -52,7 +54,7 @@ try {
         $input = json_decode(file_get_contents('php://input'), true);
         $name = trim($input['name'] ?? '');
         if (empty($name)) {
-            throw new Exception("Il nome del peer non può essere vuoto.");
+            throw new Exception(t($lang, 'api.name_required'));
         }
         $result = $manager->addPeer($name);
         echo json_encode(['success' => true, 'peer' => $result]);
@@ -63,7 +65,7 @@ try {
         $input = json_decode(file_get_contents('php://input'), true);
         $id = trim($input['id'] ?? '');
         if (empty($id)) {
-            throw new Exception("ID obbligatorio.");
+            throw new Exception(t($lang, 'api.id_required'));
         }
         $keys = $manager->regenerateKey($id);
         echo json_encode([
@@ -79,7 +81,7 @@ try {
         $id = trim($input['id'] ?? '');
         $name = trim($input['name'] ?? '');
         if (empty($id) || empty($name)) {
-            throw new Exception("ID e nome sono obbligatori.");
+            throw new Exception(t($lang, 'api.id_name_required'));
         }
         $manager->updatePeer($id, $name);
         echo json_encode(['success' => true]);
@@ -90,14 +92,14 @@ try {
         $input = json_decode(file_get_contents('php://input'), true);
         $id = trim($input['id'] ?? '');
         if (empty($id)) {
-            throw new Exception("ID obbligatorio.");
+            throw new Exception(t($lang, 'api.id_required'));
         }
         $manager->deletePeer($id);
         echo json_encode(['success' => true]);
         exit;
     }
 
-    echo json_encode(['success' => false, 'error' => 'Azione sconosciuta: ' . $_GET['action']]);
+    echo json_encode(['success' => false, 'error' => sprintf(t($lang, 'api.unknown_action'), $_GET['action'])]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }

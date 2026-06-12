@@ -10,6 +10,9 @@
  */
 
 return [
+    // Application Language (en = English, it = Italian)
+    'lang' => 'en',
+
     // MikroTik CHR Connection Details
     'host' => 'https://192.168.88.1',    // Your MikroTik CHR IP or hostname
     'username' => 'admin',

@@ -5,11 +5,9 @@
 
 'use strict';
 
-/* ── API Helper ─────────────────────────────────────────────── */
-function apiUrl(action) {
-    let url = 'src/api.php?action=' + encodeURIComponent(action);
-    if (AppConfig.isDemo) url += '&demo';
-    return url;
+/* ── i18n helper ─────────────────────────────────────────────── */
+function t(key) {
+    return AppConfig.translations?.[key] || key;
 }
 
 /* ── State ──────────────────────────────────────────────────── */
@@ -27,10 +25,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const label = document.getElementById('hideOfflineLabel');
     if (!hideOffline) {
         btn.classList.remove('btn-active');
-        label.innerText = 'Nascondi offline';
+        label.innerText = t('js.hide_offline');
     } else {
         btn.classList.add('btn-active');
-        label.innerText = 'Mostra tutti';
+        label.innerText = t('js.show_all');
     }
 
     loadPeers().then(() => updateSortIcons());
@@ -49,7 +47,7 @@ async function loadPeers() {
     const loader = document.getElementById('tableLoader');
     loader.classList.add('active');
     try {
-        const res = await fetch(apiUrl('get_peers'));
+        const res = await fetch('src/api.php?action=get_peers');
         const data = await res.json();
         if (data.success) {
             allPeers = data.peers;
@@ -57,10 +55,10 @@ async function loadPeers() {
             applyFiltersAndSort();
             highlightPendingPeer();
         } else {
-            showToast('Errore nel caricamento dei dati: ' + data.error, true);
+            showToast(t('js.load_error').replace('%s', data.error), true);
         }
     } catch {
-        showToast('Errore di connessione al server backend.', true);
+        showToast(t('js.connection_error'), true);
     } finally {
         loader.classList.remove('active');
     }
@@ -71,7 +69,7 @@ async function refreshPeers() {
     const tableWrapper = document.querySelector('.table-wrapper');
     const savedScroll = tableWrapper?.scrollTop || 0;
     try {
-        const res = await fetch(apiUrl('get_peers'));
+        const res = await fetch('src/api.php?action=get_peers');
         const data = await res.json();
         if (data.success) {
             allPeers = data.peers;
@@ -126,10 +124,10 @@ function toggleHideOffline() {
     const label = document.getElementById('hideOfflineLabel');
     if (hideOffline) {
         btn.classList.add('btn-active');
-        label.innerText = 'Mostra tutti';
+        label.innerText = t('js.show_all');
     } else {
         btn.classList.remove('btn-active');
-        label.innerText = 'Nascondi offline';
+        label.innerText = t('js.hide_offline');
     }
     applyFiltersAndSort();
 }
@@ -216,51 +214,51 @@ function renderPeers(peers) {
         let isActive = isPeerActive(peer);
         if (isActive) activeCount++;
 
-        const endpoint = peer['current-endpoint-address'] || 'Non Connesso';
+        const endpoint = peer['current-endpoint-address'] || t('js.endpoint_na');
 
         const tr = document.createElement('tr');
         tr.setAttribute('data-peer-ip', (peer['allowed-address'] || '').split('/')[0]);
         //console.log(peer);
         tr.innerHTML = `
-            <td data-label="Nome & Commento">
-                <span class="peer-name">${escapeHtml(peer.name || 'Senza Nome')}</span>
+            <td data-label="${t('js.col_name')}">
+                <span class="peer-name">${escapeHtml(peer.name || t('js.unnamed'))}</span>
             </td>
-            <td data-label="IP Assegnato">
-                <span class="peer-ip-badge" style="cursor:pointer;" onclick="copyDnatPort('${escapeJs(peer['allowed-address'].split('/')[0])}')" title="Copia Porta Winbox (DNAT)">${escapeHtml(peer['allowed-address'].split('/')[0])}</span>
+            <td data-label="${t('js.col_ip')}">
+                <span class="peer-ip-badge" style="cursor:pointer;" onclick="copyDnatPort('${escapeJs(peer['allowed-address'].split('/')[0])}')" title="${t('js.copy_port_title')}">${escapeHtml(peer['allowed-address'].split('/')[0])}</span>
             </td>
-            <td data-label="Ultimo Handshake">
+            <td data-label="${t('js.col_handshake')}">
                 <div class="handshake-cell">
                     <span class="handshake-pulse ${isActive ? 'active' : ''}"></span>
                     <span class="handshake-dot-inactive"></span>
                     <span>${escapeHtml(handshake)}</span>
                 </div>
             </td>
-            <td data-label="Endpoint">
+            <td data-label="${t('js.col_endpoint')}">
                 <span style="font-family:monospace;color:${peer['current-endpoint-address'] ? 'var(--text-color)' : 'var(--text-muted)'};">
                     ${escapeHtml(endpoint)}
                 </span>
             </td>
-            <td data-label="Traffico">
+            <td data-label="${t('js.col_traffic')}">
                 <div class="traffic-info">
                     <div class="traffic-row">
-                        <span class="traffic-label">↓ rx</span>
+                        <span class="traffic-label">${t('js.rx_label')}</span>
                         <span class="traffic-val">${escapeHtml(peer.rx_formatted)}</span>
                     </div>
                     <div class="traffic-row">
-                        <span class="traffic-label">↑ tx</span>
+                        <span class="traffic-label">${t('js.tx_label')}</span>
                         <span class="traffic-val">${escapeHtml(peer.tx_formatted)}</span>
                     </div>
                 </div>
             </td>
-            <td data-label="Azioni" style="text-align:right;">
+            <td data-label="${t('js.col_actions')}" style="text-align:right;">
                 <div class="actions-cell">
-                    <button class="icon-btn" onclick="openExportModal('${escapeJs(peer['.id'])}','${escapeJs(peer.name)}','${escapeJs(peer['allowed-address'])}')" title="Scarica configurazione client">
+                    <button class="icon-btn" onclick="openExportModal('${escapeJs(peer['.id'])}','${escapeJs(peer.name)}','${escapeJs(peer['allowed-address'])}')" title="${t('js.download_title')}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
                     </button>
-                    <button class="icon-btn" onclick="openEditModal('${peer['.id']}','${escapeJs(peer.name)}')" title="Modifica Nome">
+                    <button class="icon-btn" onclick="openEditModal('${peer['.id']}','${escapeJs(peer.name)}')" title="${t('js.edit_title')}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>
                     </button>
-                    <button class="icon-btn icon-btn-danger" onclick="openDeleteModal('${peer['.id']}','${escapeJs(peer.name)}')" title="Elimina peer">
+                    <button class="icon-btn icon-btn-danger" onclick="openDeleteModal('${peer['.id']}','${escapeJs(peer.name)}')" title="${t('js.delete_title')}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
                     </button>
                 </div>
@@ -299,7 +297,7 @@ function openAddModal() {
     document.getElementById('addModalBackdrop').classList.add('active');
     document.getElementById('peerName').focus();
     const submitBtn = document.getElementById('btnSubmitAdd');
-    submitBtn.innerText = 'Crea Peer';
+    submitBtn.innerText = t('modal.add.submit');
     submitBtn.disabled = false;
 }
 
@@ -313,27 +311,27 @@ async function submitAddPeer(event) {
     const nameInput = document.getElementById('peerName');
     const submitBtn = document.getElementById('btnSubmitAdd');
     const orig = submitBtn.innerText;
-    submitBtn.innerText = 'Creazione...';
+    submitBtn.innerText = t('js.creating');
     submitBtn.disabled = true;
 
     try {
-        const res = await fetch(apiUrl('add_peer'), {
+        const res = await fetch('src/api.php?action=add_peer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: nameInput.value })
         });
         const data = await res.json();
         if (data.success) {
-            showToast('Peer WireGuard aggiunto con successo!');
+            showToast(t('js.peer_created'));
             pendingHighlightId = data.peer.ip;
             displayAddResult(data.peer);
         } else {
-            showToast('Errore durante la creazione: ' + data.error, true);
+            showToast(t('js.create_error').replace('%s', data.error), true);
             submitBtn.innerText = orig;
             submitBtn.disabled = false;
         }
     } catch {
-        showToast('Errore di connessione API.', true);
+        showToast(t('js.api_error'), true);
         submitBtn.innerText = orig;
         submitBtn.disabled = false;
     }
@@ -379,7 +377,7 @@ function setupDownload(el, filename, content) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast(`File ${filename} scaricato!`);
+        showToast(t('js.file_downloaded').replace('%s', filename));
     });
 }
 
@@ -402,23 +400,23 @@ async function submitEditPeer(event) {
     const id = document.getElementById('editPeerId').value;
     const name = document.getElementById('editPeerName').value;
     try {
-        const res = await fetch(apiUrl('update_peer'), {
+        const res = await fetch('src/api.php?action=update_peer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id, name })
         });
         const data = await res.json();
         if (data.success) {
-            showToast('Nome peer aggiornato con successo!');
+            showToast(t('js.peer_updated'));
             const editedPeer = allPeers.find(p => p['.id'] === id);
             pendingHighlightId = editedPeer ? (editedPeer['allowed-address'] || '').split('/')[0] : null;
             closeEditModal();
             loadPeers();
         } else {
-            showToast('Errore durante la modifica: ' + data.error, true);
+            showToast(t('js.update_error').replace('%s', data.error), true);
         }
     } catch {
-        showToast('Errore di connessione API.', true);
+        showToast(t('js.api_error'), true);
     }
 }
 
@@ -440,21 +438,21 @@ function closeDeleteModal() {
 
 async function submitDeletePeer(id) {
     try {
-        const res = await fetch(apiUrl('delete_peer'), {
+        const res = await fetch('src/api.php?action=delete_peer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id })
         });
         const data = await res.json();
         if (data.success) {
-            showToast('Peer WireGuard rimosso con successo!');
+            showToast(t('js.peer_deleted'));
             closeDeleteModal();
             loadPeers();
         } else {
-            showToast('Errore durante la cancellazione: ' + data.error, true);
+            showToast(t('js.delete_error').replace('%s', data.error), true);
         }
     } catch {
-        showToast('Errore di connessione API.', true);
+        showToast(t('js.api_error'), true);
     }
 }
 
@@ -480,7 +478,7 @@ function openExportModal(id, name, allowedAddress) {
     document.getElementById('btnRegenerateKey').disabled = false;
     document.getElementById('btnRegenerateKey').innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.688-5.57m-1.246-7.755v4.992m0 0h-4.992m4.993 0-3.183-3.183a8.25 8.25 0 0 0-13.688 5.57"/></svg>
-        Rigenera Chiave & Scarica Config`;
+        ${t('js.regenerate_btn')}`;
 
     switchExportTab('script');
     document.getElementById('exportModalBackdrop').classList.add('active');
@@ -504,7 +502,7 @@ AllowedIPs = ${AppConfig.clientAllowedIps}
 PersistentKeepalive = 25`;
 
     const scriptContent = `# --- MikroTik Client Setup Script ---
-# Incolla questo codice nel terminale del tuo MikroTik
+# ${t('js.script_comment_header')}
 
 /interface wireguard
 add name="wg-resnovae" private-key="${privateKey}" mtu=1420
@@ -529,15 +527,15 @@ add address=3.0.0.1 list=MANAGEMENT`;
 }
 
 async function regenerateKey() {
-    if (!confirm('ATTENZIONE: La rigenerazione della chiave interromperà immediatamente la VPN su questo cliente fino a quando non importi la nuova configurazione sul router. Procedere?')) {
+    if (!confirm(t('js.regenerate_confirm'))) {
         return;
     }
     const btn = document.getElementById('btnRegenerateKey');
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> Rigenerazione...`;
+    btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> ${t('js.regenerating')}`;
 
     try {
-        const res = await fetch(apiUrl('regenerate_key'), {
+        const res = await fetch('src/api.php?action=regenerate_key', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: exportPeerId })
@@ -550,19 +548,19 @@ async function regenerateKey() {
             document.getElementById('exportConfigSection').style.display = 'block';
             switchExportTab('script');
 
-            showToast('Chiave rigenerata con successo!');
+            showToast(t('js.key_regenerated'));
             btn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                Configurazione Aggiornata`;
+                ${t('js.config_updated')}`;
         } else {
-            showToast('Errore: ' + data.error, true);
+            showToast(t('js.regenerate_error').replace('%s', data.error), true);
             btn.disabled = false;
-            btn.innerHTML = `Rigenera Chiave & Scarica Config`;
+            btn.innerHTML = `${t('js.regenerate_btn')}`;
         }
     } catch {
-        showToast('Errore di connessione API.', true);
+        showToast(t('js.api_error'), true);
         btn.disabled = false;
-        btn.innerHTML = `Rigenera Chiave & Scarica Config`;
+        btn.innerHTML = `${t('js.regenerate_btn')}`;
     }
 }
 
@@ -587,14 +585,14 @@ function copyDnatPort(ip) {
     const parts = ip.split('.');
     const dnatPort = 30000 + parseInt(parts[2]) * 1000 + parseInt(parts[3]);
     navigator.clipboard.writeText(dnatPort.toString())
-        .then(() => showToast(`Porta Winbox (DNAT): ${dnatPort} copiata!`))
-        .catch(() => showToast('Impossibile copiare.', true));
+        .then(() => showToast(t('js.dnat_copied').replace('%d', dnatPort)))
+        .catch(() => showToast(t('js.copy_failed'), true));
 }
 
 function copyToClipboard(elementId) {
     navigator.clipboard.writeText(document.getElementById(elementId).innerText)
-        .then(() => showToast('Codice copiato negli appunti!'))
-        .catch(() => showToast('Impossibile copiare il codice automaticamente.', true));
+        .then(() => showToast(t('js.code_copied')))
+        .catch(() => showToast(t('js.code_copy_failed'), true));
 }
 
 /* ── Toast ──────────────────────────────────────────────────── */

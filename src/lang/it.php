@@ -1,0 +1,141 @@
+<?php
+
+return [
+
+    // ── HTML <head> ────────────────────────────────────────────
+    'site.title'             => 'WireGuard Peer Manager - ResNovae',
+    'site.description'       => 'Gestore web per peer WireGuard su MikroTik RouterOS 7.',
+
+    // ── Banners ────────────────────────────────────────────────
+    'banner.api_error'       => 'Errore di connessione API: <strong>%s</strong>. Modalità dimostrativa abilitata.',
+    'banner.no_credentials'  => 'Nessuna credenziale salvata in config.php. Visualizzazione dei dati dimostrativi.',
+
+    // ── Header ─────────────────────────────────────────────────
+    'header.title'           => 'WireGuard Peer Manager',
+    'header.subtitle'        => 'Amministrazione WireGuard per MikroTik RouterOS 7',
+    'header.router_chr'      => 'Router CHR:',
+    'header.router_demo'     => 'Simulato (Demo)',
+
+    // ── Stats ──────────────────────────────────────────────────
+    'stats.total_peers'      => 'Total Peers',
+    'stats.total_peers_desc' => 'Configurati sull\'interfaccia',
+    'stats.subnet'           => 'Subnet WireGuard',
+    'stats.subnet_prefix'    => 'IP Server:',
+    'stats.endpoint'         => 'Endpoint Pubblico',
+    'stats.endpoint_desc'    => 'Indirizzo per la connessione client',
+    'stats.active_peers'     => 'Peer Attivi',
+    'stats.active_peers_desc'=> 'Handshake effettuato < 5 min',
+
+    // ── Search / Toolbar ───────────────────────────────────────
+    'search.placeholder'          => 'Cerca peer per nome o indirizzo IP...',
+    'search.hide_offline_title'   => 'Nascondi peer offline',
+    'search.hide_offline'         => 'Nascondi offline',
+    'search.show_all'             => 'Mostra tutti',
+    'search.add_peer'             => 'Aggiungi Nuovo Peer',
+
+    // ── Table ──────────────────────────────────────────────────
+    'table.name'             => 'Nome',
+    'table.ip'               => 'IP Assegnato',
+    'table.handshake'        => 'Ultimo Handshake',
+    'table.endpoint'         => 'Endpoint',
+    'table.traffic'          => 'Traffico',
+    'table.actions'          => 'Azioni',
+
+    // ── Empty state ────────────────────────────────────────────
+    'empty.title'            => 'Nessun peer trovato',
+    'empty.description'      => 'Non è presente alcun client configurato su questa interfaccia WireGuard.',
+
+    // ── Add Peer Modal ─────────────────────────────────────────
+    'modal.add.title'            => 'Aggiungi Nuovo Peer WireGuard',
+    'modal.add.description'      => 'Verranno generate automaticamente le chiavi crittografiche client e assegnato il primo indirizzo IP libero disponibile all\'interno della subnet.',
+    'modal.add.label_name'       => 'Nome Peer / Cliente',
+    'modal.add.placeholder_name' => 'es. Enrico-Casa',
+    'modal.add.success_title'    => 'Peer Creato con Successo',
+    'modal.add.success_desc'     => 'Salva i dettagli o scarica il file di configurazione subito. Per ragioni di sicurezza, la chiave privata non sarà più visibile una volta chiusa questa finestra.',
+    'modal.add.label_ip'         => 'Indirizzo IP Assegnato',
+    'modal.add.tab_conf'         => 'Configurazione (.conf)',
+    'modal.add.tab_script'       => 'Script RouterOS (.rsc)',
+    'modal.add.copy_title'       => 'Copia codice',
+    'modal.add.download_conf'    => 'Scarica file .conf',
+    'modal.add.download_script'  => 'Scarica script .rsc',
+    'modal.add.cancel'           => 'Annulla',
+    'modal.add.submit'           => 'Crea Peer',
+
+    // ── Edit Peer Modal ────────────────────────────────────────
+    'modal.edit.title'       => 'Modifica Nome Peer',
+    'modal.edit.label_name'  => 'Nome Peer / Commento',
+    'modal.edit.cancel'      => 'Annulla',
+    'modal.edit.submit'      => 'Salva Modifiche',
+
+    // ── Delete Peer Modal ──────────────────────────────────────
+    'modal.delete.title'       => 'Elimina Peer WireGuard',
+    'modal.delete.confirm'     => 'Sei sicuro di voler eliminare il peer <strong>%s</strong>?',
+    'modal.delete.description' => 'Questa azione è irreversibile e rimuoverà la configurazione di accesso al server per il client.',
+    'modal.delete.cancel'      => 'Annulla',
+    'modal.delete.submit'      => 'Elimina Ora',
+
+    // ── Export Modal ───────────────────────────────────────────
+    'modal.export.title'           => 'Esporta Configurazione Client',
+    'modal.export.label_ip'        => 'Indirizzo IP',
+    'modal.export.label_port'      => 'Porta Winbox (DNAT)',
+    'modal.export.regenerate_btn'  => 'Rigenera Chiave & Scarica Config',
+    'modal.export.regenerate_desc' => 'Genera una nuova chiave privata, aggiorna il peer sul CHR e scarica la configurazione completa.',
+    'modal.export.tab_conf'        => 'Configurazione (.conf)',
+    'modal.export.tab_script'      => 'Script RouterOS (.rsc)',
+    'modal.export.download_conf'   => 'Scarica file .conf',
+    'modal.export.download_script' => 'Scarica script .rsc',
+    'modal.export.close'           => 'Chiudi',
+
+    // ── Toast ──────────────────────────────────────────────────
+    'toast.default'          => 'Operazione completata con successo!',
+
+    // ── API error messages ─────────────────────────────────────
+    'api.action_required'    => 'Azione non specificata.',
+    'api.name_required'      => 'Il nome del peer non può essere vuoto.',
+    'api.id_required'        => 'ID obbligatorio.',
+    'api.id_name_required'   => 'ID e nome sono obbligatori.',
+    'api.unknown_action'     => 'Azione sconosciuta: %s',
+
+    // ── JavaScript UI strings ──────────────────────────────────
+    'js.col_name'             => 'Nome & Commento',
+    'js.col_ip'               => 'IP Assegnato',
+    'js.col_handshake'        => 'Ultimo Handshake',
+    'js.col_endpoint'         => 'Endpoint',
+    'js.col_traffic'          => 'Traffico',
+    'js.col_actions'          => 'Azioni',
+    'js.regenerate_btn'       => 'Rigenera Chiave & Scarica Config',
+    'js.script_comment_header' => 'Incolla questo codice nel terminale del tuo MikroTik',
+    'js.regenerate_error'     => 'Errore: %s',
+    'js.dnat_copied'          => 'Porta Winbox (DNAT): %s copiata!',
+    'js.code_copy_failed'     => 'Impossibile copiare il codice automaticamente.',
+    'js.hide_offline'         => 'Nascondi offline',
+    'js.show_all'             => 'Mostra tutti',
+    'js.load_error'           => 'Errore nel caricamento dei dati: %s',
+    'js.connection_error'     => 'Errore di connessione al server backend.',
+    'js.endpoint_na'          => 'Non Connesso',
+    'js.unnamed'              => 'Senza Nome',
+    'js.copy_port_title'      => 'Copia Porta Winbox (DNAT)',
+    'js.rx_label'             => '↓ rx',
+    'js.tx_label'             => '↑ tx',
+    'js.download_title'       => 'Scarica configurazione client',
+    'js.edit_title'           => 'Modifica Nome',
+    'js.delete_title'         => 'Elimina peer',
+    'js.creating'             => 'Creazione...',
+    'js.peer_created'         => 'Peer WireGuard aggiunto con successo!',
+    'js.create_error'         => 'Errore durante la creazione: %s',
+    'js.api_error'            => 'Errore di connessione API.',
+    'js.file_downloaded'      => 'File %s scaricato!',
+    'js.peer_updated'         => 'Nome peer aggiornato con successo!',
+    'js.update_error'         => 'Errore durante la modifica: %s',
+    'js.peer_deleted'         => 'Peer WireGuard rimosso con successo!',
+    'js.delete_error'         => 'Errore durante la cancellazione: %s',
+    'js.regenerate_confirm'   => 'ATTENZIONE: La rigenerazione della chiave interromperà immediatamente la VPN su questo cliente fino a quando non importi la nuova configurazione sul router. Procedere?',
+    'js.regenerating'         => 'Rigenerazione...',
+    'js.key_regenerated'      => 'Chiave rigenerata con successo!',
+    'js.config_updated'       => 'Configurazione Aggiornata',
+    'js.error_prefix'         => 'Errore: %s',
+    'js.port_copied'          => 'Porta Winbox (DNAT): %s copiata!',
+    'js.copy_failed'          => 'Impossibile copiare.',
+    'js.code_copied'          => 'Codice copiato negli appunti!',
+    'js.copy_auto_failed'     => 'Impossibile copiare il codice automaticamente.',
+];
