@@ -57,8 +57,6 @@ cd mikrotik-wireguard
 cp config.example.php config.php
 # Edit config.php with your MikroTik CHR credentials
 
-php tests/run_tests.php
-
 # Open index.php in your browser
 # Connection error banner appears if CHR is unreachable
 ```
