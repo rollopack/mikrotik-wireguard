@@ -74,7 +74,7 @@ try {
             </div>
 
             <div class="status-badge">
-                <span class="status-dot <?php echo $connectionError !== null ? 'demo' : 'active'; ?>"></span>
+                <span class="status-dot <?php echo $connectionError !== null ? 'error' : 'active'; ?>"></span>
                 <span><?php echo t($lang, 'header.router_chr'); ?> <strong><?php echo htmlspecialchars($config['host']); ?></strong></span>
             </div>
         </header>

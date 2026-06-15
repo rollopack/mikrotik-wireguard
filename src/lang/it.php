@@ -7,14 +7,12 @@ return [
     'site.description'       => 'Gestore web per peer WireGuard su MikroTik RouterOS 7.',
 
     // ── Banners ────────────────────────────────────────────────
-    'banner.api_error'       => 'Errore di connessione API: <strong>%s</strong>. Modalità dimostrativa abilitata.',
-    'banner.no_credentials'  => 'Nessuna credenziale salvata in config.php. Visualizzazione dei dati dimostrativi.',
+    'banner.api_error'       => 'Errore di connessione API: <strong>%s</strong>.',
 
     // ── Header ─────────────────────────────────────────────────
     'header.title'           => 'WireGuard Peer Manager',
     'header.subtitle'        => 'Amministrazione WireGuard per MikroTik RouterOS 7',
     'header.router_chr'      => 'Router CHR:',
-    'header.router_demo'     => 'Simulato (Demo)',
 
     // ── Stats ──────────────────────────────────────────────────
     'stats.total_peers'      => 'Total Peers',

@@ -93,7 +93,7 @@ header {
 }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; }
 .status-dot.active { background-color: var(--success); box-shadow: 0 0 10px var(--success); animation: pulse 2s infinite; }
-.status-dot.demo   { background-color: var(--warning); box-shadow: 0 0 10px var(--warning); }
+.status-dot.error  { background-color: var(--danger); box-shadow: 0 0 10px var(--danger); }
 
 /* ── Stats ─────────────────────────────────────────────────── */
 .stats-grid {

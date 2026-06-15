@@ -51,7 +51,7 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 ## Quick Start
 
 ```bash
-git clone https://github.com/YOUR_USER/wireguard-manager.git
+git clone https://github.com/rollopack/wireguard-manager.git
 cd wireguard-manager
 
 cp config.example.php config.php

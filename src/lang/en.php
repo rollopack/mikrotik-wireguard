@@ -7,14 +7,12 @@ return [
     'site.description'       => 'Web dashboard for WireGuard peers on MikroTik RouterOS 7.',
 
     // ── Banners ────────────────────────────────────────────────
-    'banner.api_error'       => 'API connection error: <strong>%s</strong>. Demo mode enabled.',
-    'banner.no_credentials'  => 'No credentials saved in config.php. Showing demo data.',
+    'banner.api_error'       => 'API connection error: <strong>%s</strong>.',
 
     // ── Header ─────────────────────────────────────────────────
     'header.title'           => 'WireGuard Peer Manager',
     'header.subtitle'        => 'WireGuard Administration for MikroTik RouterOS 7',
     'header.router_chr'      => 'CHR Router:',
-    'header.router_demo'     => 'Simulated (Demo)',
 
     // ── Stats ──────────────────────────────────────────────────
     'stats.total_peers'      => 'Total Peers',
