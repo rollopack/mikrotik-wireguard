@@ -8,7 +8,11 @@ class MockMikrotikRestClient {
     public array $responses = [];
 
     public function setResponse(string $method, string $path, $response) {
-        $this->responses[strtoupper($method) . ':' . $path] = $response;
+        $key = strtoupper($method) . ':' . $path;
+        if (!isset($this->responses[$key])) {
+            $this->responses[$key] = [];
+        }
+        $this->responses[$key][] = $response;
     }
 
     public function request(string $method, string $path, array $data = null): array {
@@ -19,8 +23,8 @@ class MockMikrotikRestClient {
         ];
 
         $key = strtoupper($method) . ':' . $path;
-        if (array_key_exists($key, $this->responses)) {
-            return $this->responses[$key];
+        if (isset($this->responses[$key]) && count($this->responses[$key]) > 0) {
+            return array_shift($this->responses[$key]);
         }
 
         return [];
@@ -192,4 +196,86 @@ class WireGuardManagerTest extends TestCase {
         $this->assertEquals('3.0.0.2/32', $putRequest['data']['allowed-address']);
         $this->assertEquals('Test-Client-New', $putRequest['data']['name']);
     }
+
+    public function testRegenerateKey() {
+        $mockClient = new MockMikrotikRestClient();
+        $mockClient->setResponse('PATCH', '/interface/wireguard/peers/*1c', []);
+
+        $manager = new WireGuardManager($mockClient, [
+            'interface' => 'WireGuard-ResNovae',
+            'subnet' => '3.0.0.0/24',
+            'server_ip' => '3.0.0.1',
+            'endpoint' => 'mailserver.resnovae.it:13231',
+            'client_allowed_ips' => '3.0.0.0/24,192.168.111.0/24'
+        ]);
+
+        $keys = $manager->regenerateKey('*1c');
+
+        $this->assertTrue(isset($keys['private_key']), 'Private key should be set');
+        $this->assertTrue(isset($keys['public_key']), 'Public key should be set');
+        $this->assertEquals(32, strlen(base64_decode($keys['private_key'])));
+        $this->assertEquals(32, strlen(base64_decode($keys['public_key'])));
+
+        // Verify PATCH request sent with new public-key
+        $patchRequest = null;
+        foreach ($mockClient->history as $req) {
+            if ($req['method'] === 'PATCH' && $req['path'] === '/interface/wireguard/peers/*1c') {
+                $patchRequest = $req;
+                break;
+            }
+        }
+
+        $this->assertNotEmpty($patchRequest, 'A PATCH request should have been made to regenerate key');
+        $this->assertEquals($keys['public_key'], $patchRequest['data']['public-key']);
+    }
+
+    public function testUpdatePeer() {
+        $mockClient = new MockMikrotikRestClient();
+        $mockClient->setResponse('PATCH', '/interface/wireguard/peers/*1c', []);
+
+        $manager = new WireGuardManager($mockClient, [
+            'interface' => 'WireGuard-ResNovae',
+            'subnet' => '3.0.0.0/24',
+            'server_ip' => '3.0.0.1'
+        ]);
+
+        $manager->updatePeer('*1c', 'Updated-Name');
+
+        // Verify PATCH request sent with new name
+        $patchRequest = null;
+        foreach ($mockClient->history as $req) {
+            if ($req['method'] === 'PATCH' && $req['path'] === '/interface/wireguard/peers/*1c') {
+                $patchRequest = $req;
+                break;
+            }
+        }
+
+        $this->assertNotEmpty($patchRequest, 'A PATCH request should have been made to update peer');
+        $this->assertEquals('Updated-Name', $patchRequest['data']['name']);
+    }
+
+    public function testDeletePeer() {
+        $mockClient = new MockMikrotikRestClient();
+        $mockClient->setResponse('DELETE', '/interface/wireguard/peers/*1c', []);
+
+        $manager = new WireGuardManager($mockClient, [
+            'interface' => 'WireGuard-ResNovae',
+            'subnet' => '3.0.0.0/24',
+            'server_ip' => '3.0.0.1'
+        ]);
+
+        $manager->deletePeer('*1c');
+
+        // Verify DELETE request sent
+        $deleteRequest = null;
+        foreach ($mockClient->history as $req) {
+            if ($req['method'] === 'DELETE' && $req['path'] === '/interface/wireguard/peers/*1c') {
+                $deleteRequest = $req;
+                break;
+            }
+        }
+
+        $this->assertNotEmpty($deleteRequest, 'A DELETE request should have been made to delete peer');
+    }
+
 }

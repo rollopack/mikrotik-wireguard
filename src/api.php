@@ -5,33 +5,29 @@ ini_set('display_errors', 0);
 
 require_once __DIR__ . '/MikrotikRestClient.php';
 require_once __DIR__ . '/WireGuardManager.php';
-require_once __DIR__ . '/DemoWireGuardManager.php';
 require_once __DIR__ . '/i18n.php';
+require_once __DIR__ . '/ConfigValidator.php';
 
 $config = require __DIR__ . '/../config.php';
+
+try {
+    ConfigValidator::validate($config);
+} catch (InvalidArgumentException $e) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'error' => 'Configuration error: ' . $e->getMessage()]);
+    exit;
+}
+
 $lang = loadLanguage($config['lang'] ?? 'en');
 
-$isDemoMode = ($config['password'] === 'password' || isset($_GET['demo']));
-$manager = null;
-
-if (!$isDemoMode) {
-    try {
-        $client = new MikrotikRestClient(
-            $config['host'],
-            $config['username'],
-            $config['password'],
-            $config['ssl_verify'] ?? false
-        );
-        $manager = new WireGuardManager($client, $config);
-        $manager->getServerPublicKey();
-    } catch (Exception $e) {
-        $isDemoMode = true;
-    }
-}
-
-if ($isDemoMode) {
-    $manager = new DemoWireGuardManager($config);
-}
+$client = new MikrotikRestClient(
+    $config['host'],
+    $config['username'],
+    $config['password'],
+    $config['ssl_verify'] ?? false
+);
+$manager = new WireGuardManager($client, $config);
+$manager->getServerPublicKey();
 
 header('Content-Type: application/json');
 

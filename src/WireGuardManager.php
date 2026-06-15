@@ -148,6 +148,7 @@ class WireGuardManager {
      * Get list of peers with formatted fields.
      * 
      * @return array
+     * @throws Exception on API error
      */
     public function getPeers(): array {
         $peers = $this->client->request('GET', '/interface/wireguard/peers');
@@ -155,7 +156,7 @@ class WireGuardManager {
 
         // Only extract fields needed by the frontend to reduce payload size
         $allowedFields = ['.id', 'name', 'allowed-address', 'last-handshake',
-                          'current-endpoint-address'];
+                          'current-endpoint-address', 'public-key'];
 
         $filteredPeers = [];
         foreach ($peers as $peer) {
@@ -184,6 +185,7 @@ class WireGuardManager {
      * 
      * @param string $name Comment/Name for the new peer.
      * @return array Array containing client config details.
+     * @throws Exception on API error or subnet full
      */
     public function addPeer(string $name): array {
         // 1. Get peers to calculate next free IP

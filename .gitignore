@@ -1,6 +1,9 @@
 # ── Sensitive Configuration ──────────────────────────────────
 config.php
 
+# ── Project-specific docs ────────────────────────────────────
+AGENTS.md
+
 # ── Migration data & scripts (local only) ────────────────────
 temp/
 

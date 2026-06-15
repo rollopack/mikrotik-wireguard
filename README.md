@@ -5,14 +5,6 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 ![Dashboard Screenshot](screenshots/Dashboard.png)
 ![Export Modal Screenshot](screenshots/Export.png)
 
-> **Disclaimer:** Questo software è fornito "cos com'è", senza alcuna garanzia. L'autore non si assume alcuna responsabilità per danni diretti o indiretti derivanti dall'uso di questo strumento. Usalo a tuo rischio e pericolo.
->
-> **This software is provided "as is" without warranty of any kind. The author assumes no responsibility for any direct or indirect damages arising from its use. Use at your own risk.**
-
-> **⚠️ Attenzione / Warning:** Questo strumento è progettato per l'uso in **reti locali fidate**. Se esposto su Internet, è necessario implementare misure di sicurezza aggiuntive come autenticazione HTTP, firewall, reverse proxy con SSL, rate limiting, e monitoraggio degli accessi. Questo script non fornisce protezione intrinseca contro attacchi esterni.
->
-> **This tool is designed for use on **trusted local networks**. If exposed to the Internet, additional security measures such as HTTP authentication, firewall, SSL reverse proxy, rate limiting, and access monitoring must be implemented. This script does not provide built-in protection against external attacks.**
-
 ## Features
 
 - **Web Dashboard** — List, create, edit, delete WireGuard peers via browser
@@ -20,10 +12,11 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 - **X25519 Key Generation** — Uses `libsodium` for cryptographic key pairs
 - **Client Config Export** — Download `.conf` (WireGuard) or `.rsc` (RouterOS script)
 - **Key Regeneration** — Rotate keys without deleting/recreating peers
-- **DNAT Port Display** — Shows Winbox DNAT port for each peer (formula: `30000 + third_octet * 1000 + fourth_octet`)
+- **Winbox DNAT Port** — Calculate and display the DNAT port for Winbox access to client routers through the CHR (`CHR_IP:DNAT_PORT`). Formula: `dnat_base + third_octet * dnat_multiplier + fourth_octet`, configurable via `config.php`.
 - **Internationalization** — Italian and English UI, switchable via `config.php`
-- **Demo Mode** — Fully functional demo using PHP sessions, no router required
 - **Live Status** — Auto-refresh every 10s, real-time handshake/traffic monitoring
+- **Config Validation** — Startup validation with user-friendly error page for misconfiguration
+- **Consistent Error Handling** — All API layers throw exceptions with context
 
 ## Requirements
 
@@ -34,7 +27,6 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 | PHP | 8.0+ | |
 | `ext-sodium` | Yes | For X25519 key generation (`sodium_crypto_scalarmult_base`) |
 | `ext-json` | Yes | For JSON encoding/decoding |
-| `ext-mbstring` | Recommended | For multibyte string handling |
 | `allow_url_fopen` | `On` | Required by `file_get_contents()` for REST API calls |
 
 ### MikroTik RouterOS 7 CHR
@@ -68,7 +60,7 @@ cp config.example.php config.php
 php tests/run_tests.php
 
 # Open index.php in your browser
-# If no router is reachable, Demo Mode activates automatically
+# Connection error banner appears if CHR is unreachable
 ```
 
 ## Configuration
@@ -87,25 +79,50 @@ See `config.example.php` for all available options:
 | `server_ip` | Server IP inside the subnet |
 | `endpoint` | Public endpoint for client connections (e.g. `vpn.example.com:13231`) |
 | `client_allowed_ips` | Allowed IPs in generated client configs |
+| `dnat_base` | Base port for the DNAT formula (default: `30000`) |
+| `dnat_multiplier` | Third octet multiplier in the DNAT formula (default: `1000`) |
+
+## DNAT Port Forwarding
+
+This feature calculates a unique DNAT port for each peer so you can reach the client's router via Winbox through the CHR, without exposing the client to the Internet. You need to **manually** create a `dst-nat` rule on the CHR:
+
+```
+/ip firewall nat add chain=dstnat action=dst-nat \
+    protocol=tcp dst-port=DNAT_PORT \
+    to-addresses=CLIENT_WG_IP to-ports=8291
+```
+
+The dashboard only *displays* the computed port — it does not manage firewall rules. Clicking a peer's IP badge copies the DNAT port to your clipboard.
+
+The formula is:
+
+```
+DNAT_PORT = dnat_base + third_octet * dnat_multiplier + fourth_octet
+```
+
+Configure `dnat_base` and `dnat_multiplier` in `config.php` to fit your subnet (see [Configuration](#configuration)).
+
+**Example with defaults (`dnat_base=30000`, `dnat_multiplier=1000`):**  
+Peer IP `3.0.0.24` → port `30000 + 0 * 1000 + 24 = **30024**`  
+CHR rule: `dst-port=30024` → `to-addresses=3.0.0.24 to-ports=8291`  
+Winbox connection: `CHR_IP:30024`
 
 ## Security
 
 - **`config.php` is gitignored** — router credentials stay local
-- **Demo mode** — activates when password is `password` or `?demo` is in the URL
 - **Private keys are never stored** on the server after the modal is closed
 - **IP restriction** via `.htaccess` (default: `192.168.111.x`)
 - **display_errors disabled** in production — no PHP error leakage
-- **Solo reti locali** — non esporre su Internet senza misure aggiuntive
 - **Intended for LAN use only** — do not expose to the Internet without additional security layers
 
 ## Project Structure
 
 ```
+├── .gitignore                # Ignores config.php, temp/, etc.
+├── .htaccess                 # IP restriction (192.168.111.x)
 ├── config.php               # Router credentials (gitignored)
 ├── config.example.php       # Configuration template
 ├── index.php                # Dashboard UI
-├── Dashboard.png            # Screenshot (root, moved to screenshots/)
-├── Export.png               # Screenshot (root, moved to screenshots/)
 ├── screenshots/
 │   ├── Dashboard.png
 │   └── Export.png
@@ -118,7 +135,7 @@ See `config.example.php` for all available options:
 │   ├── api.php                      # AJAX API endpoints
 │   ├── WireGuardManager.php         # Business logic
 │   ├── MikrotikRestClient.php       # REST API client (file_get_contents)
-│   ├── DemoWireGuardManager.php     # Session-based mock for demo mode
+│   ├── ConfigValidator.php          # Configuration validation
 │   ├── i18n.php                     # Translation helpers
 │   └── lang/
 │       ├── it.php                   # Italian strings
@@ -134,7 +151,11 @@ See `config.example.php` for all available options:
 php tests/run_tests.php
 ```
 
-Uses a mock REST client — no real router needed. 33+ assertions covering key generation, IP allocation, config formatting, API interaction.
+Uses a mock REST client — no real router needed. 42 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD operations (add, update, delete, regenerate key).
+
+> **Disclaimer:** This software is provided "as is" without warranty of any kind. The author assumes no responsibility for any direct or indirect damages arising from its use. Use at your own risk.
+
+> **Warning:** This tool is designed for use on **trusted local networks**. If exposed to the Internet, additional security measures such as HTTP authentication, firewall, SSL reverse proxy, rate limiting, and access monitoring must be implemented. This script does not provide built-in protection against external attacks.
 
 ## License
 

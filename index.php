@@ -11,8 +11,16 @@ ini_set('display_errors', 0);
 require_once __DIR__ . '/src/MikrotikRestClient.php';
 require_once __DIR__ . '/src/WireGuardManager.php';
 require_once __DIR__ . '/src/i18n.php';
+require_once __DIR__ . '/src/ConfigValidator.php';
 
 $config = require __DIR__ . '/config.php';
+
+try {
+    ConfigValidator::validate($config);
+} catch (InvalidArgumentException $e) {
+    ConfigValidator::renderErrorPage($e->getMessage());
+}
+
 $lang = loadLanguage($config['lang'] ?? 'en');
 
 try {
@@ -21,22 +29,18 @@ try {
     $maxPeers = '?';
 }
 
-$isDemoMode = ($config['password'] === 'password' || isset($_GET['demo']));
-$error = null;
-
-if (!$isDemoMode) {
-    try {
-        $client = new MikrotikRestClient(
-            $config['host'],
-            $config['username'],
-            $config['password'],
-            $config['ssl_verify'] ?? false
-        );
-        $client->request('GET', '/interface/wireguard');
-    } catch (Exception $e) {
-        $error = $e->getMessage();
-        $isDemoMode = true;
-    }
+// Test connection to CHR
+$connectionError = null;
+try {
+    $client = new MikrotikRestClient(
+        $config['host'],
+        $config['username'],
+        $config['password'],
+        $config['ssl_verify'] ?? false
+    );
+    $client->request('GET', '/interface/wireguard');
+} catch (Exception $e) {
+    $connectionError = $e->getMessage();
 }
 ?>
 <!DOCTYPE html>
@@ -54,18 +58,11 @@ if (!$isDemoMode) {
 </head>
 <body>
 
-    <?php if ($isDemoMode): ?>
-        <?php if ($error !== null): ?>
-            <div class="banner banner-danger" id="errorBanner">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
-                <span><?php printf(t($lang, 'banner.api_error'), '<strong>' . htmlspecialchars($error) . '</strong>'); ?></span>
-            </div>
-        <?php else: ?>
-            <div class="banner banner-warning">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/></svg>
-                <span><?php echo t($lang, 'banner.no_credentials'); ?></span>
-            </div>
-        <?php endif; ?>
+    <?php if ($connectionError !== null): ?>
+        <div class="banner banner-danger" id="errorBanner">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+            <span><?php printf(t($lang, 'banner.api_error'), '<strong>' . htmlspecialchars($connectionError) . '</strong>'); ?></span>
+        </div>
     <?php endif; ?>
 
     <div class="container">
@@ -77,8 +74,8 @@ if (!$isDemoMode) {
             </div>
 
             <div class="status-badge">
-                <span class="status-dot <?php echo $isDemoMode ? 'demo' : 'active'; ?>"></span>
-                <span><?php echo t($lang, 'header.router_chr'); ?> <strong><?php echo $isDemoMode ? t($lang, 'header.router_demo') : htmlspecialchars($config['host']); ?></strong></span>
+                <span class="status-dot <?php echo $connectionError !== null ? 'demo' : 'active'; ?>"></span>
+                <span><?php echo t($lang, 'header.router_chr'); ?> <strong><?php echo htmlspecialchars($config['host']); ?></strong></span>
             </div>
         </header>
 
@@ -355,7 +352,6 @@ if (!$isDemoMode) {
 
     <script>
         const AppConfig = {
-            isDemo: <?php echo json_encode($isDemoMode); ?>,
             endpoint: <?php echo json_encode($config['endpoint']); ?>,
             clientAllowedIps: <?php echo json_encode($config['client_allowed_ips']); ?>,
             serverPublicKey: '',
