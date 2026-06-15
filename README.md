@@ -51,8 +51,8 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 ## Quick Start
 
 ```bash
-git clone https://github.com/rollopack/wireguard-manager.git
-cd wireguard-manager
+git clone https://github.com/rollopack/mikrotik-wireguard.git
+cd mikrotik-wireguard
 
 cp config.example.php config.php
 # Edit config.php with your MikroTik CHR credentials
