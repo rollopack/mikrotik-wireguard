@@ -297,7 +297,6 @@ function openAddModal() {
     document.getElementById('addModalBackdrop').classList.add('active');
     document.getElementById('peerName').focus();
     const submitBtn = document.getElementById('btnSubmitAdd');
-    submitBtn.innerText = t('modal.add.submit');
     submitBtn.disabled = false;
 }
 
