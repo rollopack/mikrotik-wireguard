@@ -1,11 +1,14 @@
 <?php
 
-class MikrotikRestClient {
+require_once __DIR__ . '/ClientInterface.php';
+
+class MikrotikRestClient implements ClientInterface {
     private string $baseUrl;
     private string $username;
     private string $password;
     private bool $sslVerify;
     private int $timeout;
+    private string $interface = 'WireGuard-ResNovae';
 
     /**
      * MikrotikRestClient constructor.
@@ -21,7 +24,8 @@ class MikrotikRestClient {
         string $username,
         string $password,
         bool $sslVerify = false,
-        int $timeout = 10
+        int $timeout = 10,
+        string $interface = 'WireGuard-ResNovae'
     ) {
         // Build base URL. If protocol is not specified, default to https://
         if (!str_starts_with($host, 'http://') && !str_starts_with($host, 'https://')) {
@@ -38,6 +42,7 @@ class MikrotikRestClient {
         $this->password = $password;
         $this->sslVerify = $sslVerify;
         $this->timeout = $timeout;
+        $this->interface = $interface;
     }
 
     /**
@@ -49,7 +54,7 @@ class MikrotikRestClient {
      * @return array Decoded JSON response.
      * @throws Exception on connection failure or API error response.
      */
-    public function request(string $method, string $path, array $data = null): array {
+    public function request(string $method, string $path, ?array $data = null): array {
         $url = $this->baseUrl . '/' . ltrim($path, '/');
         $method = strtoupper($method);
         
@@ -114,5 +119,107 @@ class MikrotikRestClient {
         }
         
         return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Get all WireGuard peers with full data including last-handshake.
+     * Filters by configured interface and formats output for frontend.
+     *
+     * @return array List of peers with normalized fields.
+     * @throws Exception on failure.
+     */
+    public function getPeers(): array
+    {
+        $peers = $this->request('GET', '/interface/wireguard/peers');
+        $interface = $this->getInterface();
+
+        // Only extract fields needed by the frontend to reduce payload size
+        $allowedFields = ['.id', 'name', 'allowed-address', 'last-handshake',
+                          'current-endpoint-address', 'public-key'];
+
+        $filteredPeers = [];
+        foreach ($peers as $peer) {
+            if (($peer['interface'] ?? '') !== $interface) {
+                continue;
+            }
+
+            $out = [];
+            foreach ($allowedFields as $f) {
+                if (isset($peer[$f])) {
+                    $out[$f] = $peer[$f];
+                }
+            }
+            $out['rx_formatted'] = self::formatBytes($peer['rx'] ?? 0);
+            $out['tx_formatted'] = self::formatBytes($peer['tx'] ?? 0);
+            $out['handshake_formatted'] = WireGuardManager::formatHandshake($peer['last-handshake'] ?? '');
+
+            $filteredPeers[] = $out;
+        }
+
+        return array_values($filteredPeers);
+    }
+
+    /**
+     * Get the server's WireGuard public key.
+     *
+     * @return string Public key in base64.
+     * @throws Exception on failure.
+     */
+    public function getServerPublicKey(): string
+    {
+        $interfaces = $this->request('GET', '/interface/wireguard');
+        foreach ($interfaces as $iface) {
+            if (($iface['name'] ?? '') === $this->getInterface()) {
+                return $iface['public-key'] ?? '';
+            }
+        }
+        throw new Exception("WireGuard interface '" . $this->getInterface() . "' not found on the MikroTik CHR.");
+    }
+
+    /**
+     * Get the WireGuard interface name from config.
+     * For REST client, we need to store it or pass it. Since it's not in constructor,
+     * we'll use a default or require it to be set.
+     *
+     * @return string
+     */
+    public function getInterface(): string
+    {
+        // Default interface - in practice this would come from config
+        // For now, we'll return a default and override in WireGuardManager if needed
+        return $this->interface ?? 'WireGuard-ResNovae';
+    }
+
+    /**
+     * Set the WireGuard interface name.
+     *
+     * @param string $interface
+     * @return void
+     */
+    public function setInterface(string $interface): void
+    {
+        $this->interface = $interface;
+    }
+
+    /**
+     * Format bytes to human-readable string.
+     *
+     * @param int $bytes
+     * @return string
+     */
+    private static function formatBytes(int $bytes): string
+    {
+        if (is_numeric($bytes)) {
+            $bytes = (float) $bytes;
+            $units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+            $pow = 0;
+            if ($bytes > 0) {
+                $pow = min(floor(log($bytes, 1024)), count($units) - 1);
+                $bytes /= pow(1024, $pow);
+            }
+            return number_format($bytes, 2, '.', '') . ' ' . $units[$pow];
+        }
+
+        return '0.00 B';
     }
 }

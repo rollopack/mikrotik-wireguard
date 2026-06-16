@@ -13,6 +13,9 @@ return [
     'header.title'           => 'WireGuard Peer Manager',
     'header.subtitle'        => 'WireGuard Administration for MikroTik RouterOS 7',
     'header.router_chr'      => 'CHR Router:',
+    'header.api_mode'        => 'API Mode:',
+    'header.api_rest'        => 'REST (port 443)',
+    'header.api_native'      => 'Native (port %s)',
 
     // ── Stats ──────────────────────────────────────────────────
     'stats.total_peers'      => 'Total Peers',

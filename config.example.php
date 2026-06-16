@@ -13,11 +13,24 @@ return [
     // Application Language (en = English, it = Italian)
     'lang' => 'en',
 
-    // MikroTik CHR Connection Details
+    // API Mode: 'rest' | 'native'
+    // 'rest'    - RouterOS REST API only (port 443), default, no extra deps
+    // 'native'  - RouterOS Native API only (port 8728/8729) via Python bridge
+    'api_mode' => 'rest',
+
+    // MikroTik CHR Connection Details (used by both REST and Native API)
     'host' => 'https://192.168.88.1',    // Your MikroTik CHR IP or hostname
     'username' => 'admin',
     'password' => 'YOUR_ROUTER_PASSWORD', // REPLACE with your actual password
     'ssl_verify' => false,    // Set true if using a valid certificate
+
+    // Native API Configuration (only used when api_mode is 'native')
+    'native_api' => [
+        'type' => 'python',              // Bridge type: 'python' (librouteros) or 'ssh' (future)
+        'port' => 8728,                  // Native API port: 8728 (plain) or 8729 (TLS)
+        'tls' => false,                  // Use TLS (port 8729) if true
+        'python_script' => __DIR__ . '/src/get_peer_data.py', // Path to Python bridge
+    ],
 
     // WireGuard Interface and Subnet Settings
     'interface' => 'WireGuard-InterfaceName',

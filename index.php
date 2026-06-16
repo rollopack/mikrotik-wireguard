@@ -8,7 +8,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
-require_once __DIR__ . '/src/MikrotikRestClient.php';
+require_once __DIR__ . '/src/ClientFactory.php';
 require_once __DIR__ . '/src/WireGuardManager.php';
 require_once __DIR__ . '/src/i18n.php';
 require_once __DIR__ . '/src/ConfigValidator.php';
@@ -32,13 +32,15 @@ try {
 // Test connection to CHR
 $connectionError = null;
 try {
-    $client = new MikrotikRestClient(
-        $config['host'],
-        $config['username'],
-        $config['password'],
-        $config['ssl_verify'] ?? false
-    );
-    $client->request('GET', '/interface/wireguard');
+    $client = ClientFactory::create($config);
+    $apiMode = $config['api_mode'] ?? 'rest';
+    if ($apiMode === 'native') {
+        // Test native API via Python bridge
+        $client->getPeers();
+    } else {
+        // Test REST API
+        $client->request('GET', '/interface/wireguard');
+    }
 } catch (Exception $e) {
     $connectionError = $e->getMessage();
 }
@@ -76,6 +78,13 @@ try {
             <div class="status-badge">
                 <span class="status-dot <?php echo $connectionError !== null ? 'error' : 'active'; ?>"></span>
                 <span><?php echo t($lang, 'header.router_chr'); ?> <strong><?php echo htmlspecialchars($config['host']); ?></strong></span>
+                <?php
+                    $apiMode = $config['api_mode'] ?? 'rest';
+                    $apiModeLabel = ($apiMode === 'native')
+                        ? sprintf(t($lang, 'header.api_native'), $config['native_api']['port'] ?? 8728)
+                        : t($lang, 'header.api_rest');
+                    echo '<span class="api-mode-badge">' . t($lang, 'header.api_mode') . ' ' . $apiModeLabel . '</span>';
+                ?>
             </div>
         </header>
 

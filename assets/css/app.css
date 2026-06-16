@@ -95,6 +95,18 @@ header {
 .status-dot.active { background-color: var(--success); box-shadow: 0 0 10px var(--success); animation: pulse 2s infinite; }
 .status-dot.error  { background-color: var(--danger); box-shadow: 0 0 10px var(--danger); }
 
+.api-mode-badge {
+    display: inline-block;
+    margin-left: 1rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(255,255,255,.08);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+
 /* ── Stats ─────────────────────────────────────────────────── */
 .stats-grid {
     display: grid;

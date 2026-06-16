@@ -22,6 +22,8 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 
 ### PHP
 
+### PHP
+
 | Component | Required | Notes |
 |-----------|----------|-------|
 | PHP | 8.0+ | |
@@ -34,8 +36,9 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 | Component | Required | Notes |
 |-----------|----------|-------|
 | RouterOS | 7.0+ | REST API requires RouterOS 7 |
-| REST API | Enabled | `/ip/service/set www-ssl disabled=no port=443` |
-| Firewall | Open port 443 | From the dashboard server to the CHR |
+| REST API | Enabled for `rest` mode | `/ip/service/set www-ssl disabled=no port=443` |
+| Native API | Enabled for `native` mode | `/ip/service/set api disabled=no port=8728` |
+| Firewall | Open port 443 (rest) or 8728/8729 (native) | From the dashboard server to the CHR |
 | WireGuard | Interface created | e.g. `WireGuard-ResNovae` |
 | SSL Certificate | Self-signed OK | Set `ssl_verify: false` in config |
 
@@ -45,7 +48,9 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 |-----------|-------|
 | Apache / Nginx | Any with PHP-FPM |
 | PHP | 8.0+ with extensions above |
-| Network access | To CHR REST API on port 443 |
+| Python 3.8+ | Required for `native` API mode only |
+| `librouteros` | `pip install librouteros` — required for `native` mode only |
+| Network access | To CHR on port 443 (rest) or 8728/8729 (native) |
 | .htaccess support | For IP restriction (optional) |
 
 ## Quick Start
@@ -68,10 +73,12 @@ See `config.example.php` for all available options:
 | Key | Description |
 |-----|-------------|
 | `lang` | UI language (`it` or `en`) |
+| `api_mode` | API mode: `rest` (default, port 443) or `native` (port 8728/8729) |
 | `host` | Router IP or hostname (e.g. `https://192.168.88.1`) |
 | `username` | Router username |
 | `password` | Router password |
 | `ssl_verify` | Verify SSL certificate (`false` for self-signed) |
+| `native_api` | Sub-array with `port`, `tls`, `python_script` for native mode |
 | `interface` | WireGuard interface name on the router |
 | `subnet` | WireGuard subnet in CIDR (e.g. `3.0.0.0/21`) |
 | `server_ip` | Server IP inside the subnet |
@@ -79,6 +86,36 @@ See `config.example.php` for all available options:
 | `client_allowed_ips` | Allowed IPs in generated client configs |
 | `dnat_base` | Base port for the DNAT formula (default: `30000`) |
 | `dnat_multiplier` | Third octet multiplier in the DNAT formula (default: `1000`) |
+
+## API Modes
+
+The dashboard supports two API modes for connecting to the MikroTik CHR. Set `api_mode` in `config.php`:
+
+| Mode | Description | Requirements |
+|------|-------------|--------------|
+| `rest` (default) | RouterOS REST API (HTTPS, port 443). Simple, no extra deps. | `allow_url_fopen=On`, PHP 8.0+ |
+| `native` | Full RouterOS Native API (port 8728/8729) via Python bridge. Alternative if REST is unavailable. | Python 3.8+, `librouteros`, native API port 8728/8729 open |
+
+### `native` mode
+
+```php
+// config.php
+'api_mode' => 'native',
+'native_api' => [
+    'type' => 'python',
+    'port' => 8728,                  // 8728 (plain) or 8729 (TLS)
+    'tls' => false,                  // true for port 8729 with TLS
+    'python_script' => __DIR__ . '/src/get_peer_data.py',
+],
+```
+
+Credentials (`host`/`username`/`password`) fall back to the main config, so you only need to override them in `native_api` if the native API uses different credentials.
+
+Requirements for `native`:
+- Python 3.8+ on the dashboard server
+- `pip install librouteros`
+- CHR firewall: allow dashboard server IP on port 8728 (or 8729 for TLS)
+- `/ip/service/set api disabled=no port=8728` on CHR (and `api-ssl` for TLS)
 
 ## DNAT Port Forwarding
 
@@ -131,8 +168,12 @@ Winbox connection: `CHR_IP:30024`
 │       └── app.js
 ├── src/
 │   ├── api.php                      # AJAX API endpoints
+│   ├── ClientInterface.php          # Common interface for REST/Native clients
+│   ├── ClientFactory.php            # Factory — creates the correct client by api_mode
+│   ├── MikrotikRestClient.php       # REST API client (file_get_contents), implements ClientInterface
+│   ├── MikrotikApiClient.php        # Native API client (Python bridge), implements ClientInterface
+│   ├── get_peer_data.py             # Python bridge: queries RouterOS native API via librouteros
 │   ├── WireGuardManager.php         # Business logic
-│   ├── MikrotikRestClient.php       # REST API client (file_get_contents)
 │   ├── ConfigValidator.php          # Configuration validation
 │   ├── i18n.php                     # Translation helpers
 │   └── lang/

@@ -1,9 +1,10 @@
 <?php
 
 require_once __DIR__ . '/run_tests.php';
+require_once __DIR__ . '/../src/ClientInterface.php';
 
 // Mock REST client for testing WireGuardManager without a real MikroTik CHR
-class MockMikrotikRestClient {
+class MockMikrotikRestClient implements ClientInterface {
     public array $history = [];
     public array $responses = [];
 
@@ -15,7 +16,7 @@ class MockMikrotikRestClient {
         $this->responses[$key][] = $response;
     }
 
-    public function request(string $method, string $path, array $data = null): array {
+    public function request(string $method, string $path, ?array $data = null): array {
         $this->history[] = [
             'method' => $method,
             'path' => $path,
@@ -28,6 +29,65 @@ class MockMikrotikRestClient {
         }
 
         return [];
+    }
+
+    // ClientInterface implementation for tests
+    public function getPeers(): array {
+        $peers = $this->request('GET', '/interface/wireguard/peers');
+        $interfaceFilter = 'WireGuard-ResNovae';
+
+        $allowedFields = ['.id', 'name', 'allowed-address', 'last-handshake',
+                          'current-endpoint-address', 'public-key'];
+
+        $filteredPeers = [];
+        foreach ($peers as $peer) {
+            if (($peer['interface'] ?? '') !== $interfaceFilter) {
+                continue;
+            }
+
+            $out = [];
+            foreach ($allowedFields as $f) {
+                if (isset($peer[$f])) {
+                    $out[$f] = $peer[$f];
+                }
+            }
+            $out['rx_formatted'] = self::formatBytes($peer['rx'] ?? 0);
+            $out['tx_formatted'] = self::formatBytes($peer['tx'] ?? 0);
+            $out['handshake_formatted'] = $peer['last-handshake'] ?? 'never';
+
+            $filteredPeers[] = $out;
+        }
+
+        return $filteredPeers;
+    }
+
+    private static function formatBytes(int|float $bytes): string {
+        if (is_numeric($bytes)) {
+            $bytes = (float) $bytes;
+            $units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+            $pow = 0;
+            if ($bytes > 0) {
+                $pow = min(floor(log($bytes, 1024)), count($units) - 1);
+                $bytes /= pow(1024, $pow);
+            }
+            return number_format($bytes, 2, '.', '') . ' ' . $units[$pow];
+        }
+        
+        return '0.00 B';
+    }
+
+    public function getServerPublicKey(): string {
+        $interfaces = $this->request('GET', '/interface/wireguard');
+        foreach ($interfaces as $iface) {
+            if (($iface['name'] ?? '') === 'WireGuard-ResNovae') {
+                return $iface['public-key'] ?? '';
+            }
+        }
+        return '';
+    }
+
+    public function getInterface(): string {
+        return 'WireGuard-ResNovae';
     }
 }
 

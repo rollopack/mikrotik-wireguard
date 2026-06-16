@@ -1,16 +1,18 @@
 <?php
 
+require_once __DIR__ . '/ClientInterface.php';
+
 class WireGuardManager {
-    private object $client;
+    private ClientInterface $client;
     private array $config;
 
     /**
      * WireGuardManager constructor.
      * 
-     * @param object $client API client (MikrotikRestClient or Mock)
+     * @param ClientInterface $client API client (MikrotikRestClient, MikrotikApiClient, or Mock implementing ClientInterface)
      * @param array $config Manager configurations (interface, subnet, server_ip, etc.)
      */
-    public function __construct(object $client, array $config) {
+    public function __construct(ClientInterface $client, array $config) {
         $this->client = $client;
         $this->config = $config;
     }
@@ -54,6 +56,20 @@ class WireGuardManager {
             }
         }
         return $maxPeers;
+    }
+
+    /**
+     * Format RouterOS duration string (e.g. "20h44m42s") into readable format (e.g. "20h 44m 42s").
+     * 
+     * @param string $duration Raw duration from RouterOS
+     * @return string Formatted duration or 'never' if empty
+     */
+    public static function formatHandshake(string $duration): string {
+        if (empty($duration) || $duration === 'never') {
+            return 'never';
+        }
+        // Add space between time units: 20h44m42s -> 20h 44m 42s
+        return preg_replace('/(\d+)([dhms])/', '$1$2 ', $duration);
     }
 
     /**
@@ -135,6 +151,12 @@ class WireGuardManager {
      * @throws Exception
      */
     public function getServerPublicKey(): string {
+        // If client implements ClientInterface, use its getServerPublicKey()
+        if ($this->client instanceof ClientInterface) {
+            return $this->client->getServerPublicKey();
+        }
+
+        // Fallback: REST API path
         $interfaces = $this->client->request('GET', '/interface/wireguard');
         foreach ($interfaces as $iface) {
             if (($iface['name'] ?? '') === $this->config['interface']) {
@@ -151,6 +173,12 @@ class WireGuardManager {
      * @throws Exception on API error
      */
     public function getPeers(): array {
+        // If client implements ClientInterface, use its getPeers() (supports native/hybrid API)
+        if ($this->client instanceof ClientInterface) {
+            return $this->client->getPeers();
+        }
+
+        // Fallback: REST API path (original logic)
         $peers = $this->client->request('GET', '/interface/wireguard/peers');
         $interfaceFilter = $this->config['interface'];
 
