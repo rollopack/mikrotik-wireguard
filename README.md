@@ -61,7 +61,8 @@ cd mikrotik-wireguard
 cp config.example.php config.php
 # Edit config.php with your MikroTik CHR credentials
 
-# Open index.php in your browser
+# Open setup.php in your browser
+# Set an admin password, then log in at login.php
 # Connection error banner appears if CHR is unreachable
 ```
 
