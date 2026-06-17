@@ -298,6 +298,7 @@ function openAddModal() {
     document.getElementById('peerName').focus();
     const submitBtn = document.getElementById('btnSubmitAdd');
     submitBtn.disabled = false;
+    submitBtn.innerText = submitBtn.dataset.origText || 'Create Peer';
 }
 
 function closeAddModal() {

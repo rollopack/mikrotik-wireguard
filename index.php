@@ -161,7 +161,7 @@ try {
             </table>
 
             <div class="empty-state" id="emptyState" style="display: none;">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75Zm-.375 0h.008v.015h-.008V9.75Z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.5 10.5a5.25 5.25 0 017 0M7.5 7.5a8.25 8.25 0 0113 0" /></svg>
                 <h3><?php echo t($lang, 'empty.title'); ?></h3>
                 <p><?php echo t($lang, 'empty.description'); ?></p>
             </div>
@@ -236,7 +236,7 @@ try {
 
                 <div class="modal-footer" id="modalFooterActions">
                     <button type="button" class="btn btn-secondary" onclick="closeAddModal()"><?php echo t($lang, 'modal.add.cancel'); ?></button>
-                    <button type="submit" class="btn btn-primary" id="btnSubmitAdd"><?php echo t($lang, 'modal.add.submit'); ?></button>
+                    <button type="submit" class="btn btn-primary" id="btnSubmitAdd" data-orig-text="<?php echo t($lang, 'modal.add.submit'); ?>"><?php echo t($lang, 'modal.add.submit'); ?></button>
                 </div>
             </form>
         </div>
