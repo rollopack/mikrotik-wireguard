@@ -44,6 +44,8 @@ try {
         exit;
     }
 
+    requireCsrf();
+
     if ($_GET['action'] === 'add_peer') {
         $input = json_decode(file_get_contents('php://input'), true);
         $name = trim($input['name'] ?? '');

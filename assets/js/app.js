@@ -317,7 +317,7 @@ async function submitAddPeer(event) {
     try {
         const res = await fetch('src/api.php?action=add_peer', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
             body: JSON.stringify({ name: nameInput.value })
         });
         const data = await res.json();
@@ -402,7 +402,7 @@ async function submitEditPeer(event) {
     try {
         const res = await fetch('src/api.php?action=update_peer', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
             body: JSON.stringify({ id, name })
         });
         const data = await res.json();
@@ -440,7 +440,7 @@ async function submitDeletePeer(id) {
     try {
         const res = await fetch('src/api.php?action=delete_peer', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
             body: JSON.stringify({ id })
         });
         const data = await res.json();
@@ -536,7 +536,7 @@ async function regenerateKey() {
     try {
         const res = await fetch('src/api.php?action=regenerate_key', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
             body: JSON.stringify({ id: exportPeerId })
         });
         const data = await res.json();
@@ -618,7 +618,7 @@ async function submitExportVpnIps() {
     try {
         const res = await fetch('src/api.php?action=export_vpn_ips', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
             body: JSON.stringify({
                 include_sstp: document.getElementById('includeSstpCheck').checked,
                 include_pptp: document.getElementById('includePptpCheck').checked

@@ -14,6 +14,9 @@ if (isAuthEnabled($config)) {
     exit;
 }
 
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+
 $error = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';

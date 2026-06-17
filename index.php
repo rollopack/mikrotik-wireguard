@@ -30,6 +30,11 @@ try {
 
 requireAuth($config);
 
+$cspNonce = base64_encode(random_bytes(16));
+header("Content-Security-Policy: default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:;");
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+
 $lang = loadLanguage($config['lang'] ?? 'en');
 
 try {
@@ -93,7 +98,7 @@ try {
                         ? sprintf(t($lang, 'header.api_native'), $config['native_api']['port'] ?? 8728)
                         : t($lang, 'header.api_rest');
                     echo '<span class="api-mode-badge">' . t($lang, 'header.api_mode') . ' ' . $apiModeLabel . '</span>';
-                    echo '<a href="?logout" class="auth-badge" title="' . t($lang, 'auth.logout_btn') . '">' . t($lang, 'auth.logout_btn') . '</a>';
+                    echo '<a href="?logout" class="auth-badge" title="' . t($lang, 'auth.logout_btn') . '"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>' . t($lang, 'auth.logout_btn') . '</a>';
                 ?>
             </div>
         </header>
@@ -422,6 +427,7 @@ try {
             dnatBase: <?php echo json_encode($config['dnat_base'] ?? 30000); ?>,
             dnatMultiplier: <?php echo json_encode($config['dnat_multiplier'] ?? 1000); ?>,
             translations: <?php echo json_encode(jsTranslations($lang), JSON_UNESCAPED_UNICODE); ?>,
+            csrfToken: <?php echo json_encode(getCsrfToken()); ?>,
         };
     </script>
     <script src="assets/js/app.js"></script>
