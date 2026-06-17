@@ -11,10 +11,13 @@
 #      for .htaccess files to work.
 #   4. Add more Require ip lines for additional subnets
 #      (e.g., a corporate VPN).
+#
+# NOTE: In Apache 2.4+ just list Require ip directives.
+# There's no need for <RequireAll> — Apache denies all
+# by default, and Require ip creates exceptions.
+# Incorrect: <RequireAll> Require all denied; Require ip ... </RequireAll>
+# Correct:   Require ip <your_network>
 # ──────────────────────────────────────────────────────
-<RequireAll>
-    Require all denied
-    # Require ip 192.168.111
-    # Require ip 10.0.0.0/8
-    # Require ip 172.16.0.0/12
-</RequireAll>
+Require ip 192.168.111
+# Require ip 10.0.0.0/8
+# Require ip 172.16.0.0/12
