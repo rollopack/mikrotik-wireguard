@@ -147,7 +147,7 @@ Winbox connection: `CHR_IP:30024`
 
 - **`config.php` is gitignored** — router credentials stay local
 - **Private keys are never stored** on the server after the modal is closed
-- **IP restriction** via `.htaccess` (default: `192.168.111.x`)
+- **IP restriction via `.htaccess`** — see `.htaccess.example` for setup instructions
 - **display_errors disabled** in production — no PHP error leakage
 - **Intended for LAN use only** — do not expose to the Internet without additional security layers
 
@@ -155,7 +155,7 @@ Winbox connection: `CHR_IP:30024`
 
 ```
 ├── .gitignore                # Ignores config.php, temp/, etc.
-├── .htaccess                 # IP restriction (192.168.111.x)
+├── .htaccess.example         # IP restriction template (comments)
 ├── config.php               # Router credentials (gitignored)
 ├── config.example.php       # Configuration template
 ├── index.php                # Dashboard UI

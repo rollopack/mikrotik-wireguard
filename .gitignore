@@ -1,5 +1,6 @@
 # ── Sensitive Configuration ──────────────────────────────────
 config.php
+.htaccess
 
 # ── Project-specific docs ────────────────────────────────────
 AGENTS.md

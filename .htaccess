@@ -1,4 +1,0 @@
-# Consenti solo accessi dalla rete locale 192.168.111.x
-<RequireAll>
-    Require ip 192.168.111
-</RequireAll>

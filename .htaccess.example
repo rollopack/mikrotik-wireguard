@@ -1,0 +1,20 @@
+# ──────────────────────────────────────────────────────
+# IP Access Restriction — Template
+# ──────────────────────────────────────────────────────
+# How to use:
+#   1. Copy this file to .htaccess (or rename it):
+#      cp .htaccess.example .htaccess
+#   2. Uncomment the Require ip line(s) for your network(s)
+#      by removing the leading "# "
+#   3. Apache requires AllowOverride All (or at minimum
+#      AllowOverride AuthConfig) in the VirtualHost config
+#      for .htaccess files to work.
+#   4. Add more Require ip lines for additional subnets
+#      (e.g., a corporate VPN).
+# ──────────────────────────────────────────────────────
+<RequireAll>
+    Require all denied
+    # Require ip 192.168.111
+    # Require ip 10.0.0.0/8
+    # Require ip 172.16.0.0/12
+</RequireAll>
