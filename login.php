@@ -10,7 +10,7 @@ $config = require __DIR__ . '/config.php';
 $lang = loadLanguage($config['lang'] ?? 'en');
 
 if (!isAuthEnabled($config)) {
-    header('Location: index.php');
+    header('Location: setup.php');
     exit;
 }
 

@@ -93,12 +93,7 @@ try {
                         ? sprintf(t($lang, 'header.api_native'), $config['native_api']['port'] ?? 8728)
                         : t($lang, 'header.api_rest');
                     echo '<span class="api-mode-badge">' . t($lang, 'header.api_mode') . ' ' . $apiModeLabel . '</span>';
-                    $authEnabled = isAuthEnabled($config);
-                    if ($authEnabled) {
-                        echo '<a href="?logout" class="auth-badge" title="' . t($lang, 'auth.logout_btn') . '">' . t($lang, 'auth.logout_btn') . '</a>';
-                    } else {
-                        echo '<a href="setup.php" class="auth-badge auth-badge-warn">' . t($lang, 'auth.setup_prompt') . '</a>';
-                    }
+                    echo '<a href="?logout" class="auth-badge" title="' . t($lang, 'auth.logout_btn') . '">' . t($lang, 'auth.logout_btn') . '</a>';
                 ?>
             </div>
         </header>

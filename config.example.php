@@ -14,9 +14,9 @@ return [
     'lang' => 'en',
 
     // Admin password hash for dashboard authentication.
-    // Leave empty ('') to disable auth (backwards compatible).
-    // Generate a hash: php -r "echo password_hash('your_password', PASSWORD_BCRYPT);"
-    // Alternatively, use the web setup at /setup.php (first visit).
+    // Leave empty ('') and use the web setup at /setup.php to set it up.
+    // To generate manually: php -r "echo password_hash('your_password', PASSWORD_BCRYPT);"
+    // NOTE: Auth is mandatory — the dashboard is inaccessible without a password.
     'admin_password_hash' => '',
 
     // API Mode: 'rest' | 'native'

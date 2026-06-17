@@ -29,9 +29,8 @@ function isAuthEnabled(array $config): bool
 
 function isLoggedIn(array $config): bool
 {
-    $hash = getAdminHash($config);
-    if ($hash === null) {
-        return true;
+    if (!isAuthEnabled($config)) {
+        return false;
     }
 
     startSession();
@@ -53,11 +52,14 @@ function isLoggedIn(array $config): bool
 function requireAuth(array $config): void
 {
     if (!isLoggedIn($config)) {
-        // API requests get JSON 401
         if (strpos($_SERVER['SCRIPT_NAME'] ?? '', 'api.php') !== false) {
             header('Content-Type: application/json');
             http_response_code(401);
             echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+            exit;
+        }
+        if (!isAuthEnabled($config)) {
+            header('Location: setup.php');
             exit;
         }
         header('Location: login.php');
