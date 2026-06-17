@@ -103,6 +103,22 @@ return [
     // ── Toast ──────────────────────────────────────────────────
     'toast.default'          => 'Operazione completata con successo!',
 
+    // ── Auth ───────────────────────────────────────────────────
+    'auth.login_title'       => 'Accesso',
+    'auth.password_label'    => 'Password',
+    'auth.login_btn'         => 'Accedi',
+    'auth.invalid_password'  => 'Password non valida.',
+    'auth.logout_btn'        => 'Esci',
+    'auth.setup_title'       => 'Imposta Password Admin',
+    'auth.setup_desc'        => 'Scegli una password per proteggere la dashboard.',
+    'auth.setup_info'        => 'Nessuna password impostata. Creane una ora per abilitare l\'autenticazione.',
+    'auth.setup_new_password' => 'Nuova Password',
+    'auth.setup_confirm'     => 'Conferma Password',
+    'auth.setup_btn'         => 'Imposta Password',
+    'auth.setup_minlength'   => 'La password deve essere di almeno 8 caratteri.',
+    'auth.setup_mismatch'    => 'Le password non coincidono.',
+    'auth.setup_prompt'      => 'Imposta password admin',
+
     // ── API error messages ─────────────────────────────────────
     'api.action_required'    => 'Azione non specificata.',
     'api.name_required'      => 'Il nome del peer non può essere vuoto.',

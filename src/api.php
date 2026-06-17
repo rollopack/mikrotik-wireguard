@@ -7,6 +7,7 @@ require_once __DIR__ . '/ClientFactory.php';
 require_once __DIR__ . '/WireGuardManager.php';
 require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/ConfigValidator.php';
+require_once __DIR__ . '/auth.php';
 
 $config = require __DIR__ . '/../config.php';
 
@@ -17,6 +18,8 @@ try {
     echo json_encode(['success' => false, 'error' => 'Configuration error: ' . $e->getMessage()]);
     exit;
 }
+
+requireAuth($config);
 
 $lang = loadLanguage($config['lang'] ?? 'en');
 

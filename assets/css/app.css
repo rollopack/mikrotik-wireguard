@@ -107,6 +107,33 @@ header {
     color: var(--text-muted);
 }
 
+.auth-badge {
+    display: inline-block;
+    margin-left: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    background: rgba(255,255,255,.06);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    transition: var(--transition-smooth);
+}
+.auth-badge:hover {
+    background: rgba(255,255,255,.12);
+    color: var(--text-color);
+}
+.auth-badge-warn {
+    color: var(--warning);
+    border-color: rgba(245,158,11,.3);
+}
+.auth-badge-warn:hover {
+    background: rgba(245,158,11,.1);
+    color: var(--warning);
+}
+
 /* ── Stats ─────────────────────────────────────────────────── */
 .stats-grid {
     display: grid;

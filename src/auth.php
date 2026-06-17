@@ -1,0 +1,105 @@
+<?php
+
+function startSession(): void
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+}
+
+function getAdminHash(array $config): ?string
+{
+    if (!empty($config['admin_password_hash'])) {
+        return $config['admin_password_hash'];
+    }
+
+    $hashFile = __DIR__ . '/../.admin-hash';
+    if (file_exists($hashFile)) {
+        $hash = trim(file_get_contents($hashFile));
+        return $hash !== '' ? $hash : null;
+    }
+
+    return null;
+}
+
+function isAuthEnabled(array $config): bool
+{
+    return getAdminHash($config) !== null;
+}
+
+function isLoggedIn(array $config): bool
+{
+    $hash = getAdminHash($config);
+    if ($hash === null) {
+        return true;
+    }
+
+    startSession();
+
+    if (empty($_SESSION['logged_in'])) {
+        return false;
+    }
+
+    $timeout = 1800;
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout) {
+        logout();
+        return false;
+    }
+    $_SESSION['last_activity'] = time();
+
+    return true;
+}
+
+function requireAuth(array $config): void
+{
+    if (!isLoggedIn($config)) {
+        // API requests get JSON 401
+        if (strpos($_SERVER['SCRIPT_NAME'] ?? '', 'api.php') !== false) {
+            header('Content-Type: application/json');
+            http_response_code(401);
+            echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+            exit;
+        }
+        header('Location: login.php');
+        exit;
+    }
+}
+
+function login(array $config, string $password): bool
+{
+    $hash = getAdminHash($config);
+    if ($hash === null) {
+        return false;
+    }
+
+    if (password_verify($password, $hash)) {
+        startSession();
+        session_regenerate_id(true);
+        $_SESSION['logged_in'] = true;
+        $_SESSION['last_activity'] = time();
+        return true;
+    }
+
+    return false;
+}
+
+function logout(): void
+{
+    startSession();
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly']
+        );
+    }
+
+    session_destroy();
+}

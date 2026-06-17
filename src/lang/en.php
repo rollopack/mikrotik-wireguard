@@ -103,6 +103,22 @@ return [
     // ── Toast ──────────────────────────────────────────────────
     'toast.default'          => 'Operation completed successfully!',
 
+    // ── Auth ───────────────────────────────────────────────────
+    'auth.login_title'       => 'Sign In',
+    'auth.password_label'    => 'Password',
+    'auth.login_btn'         => 'Sign In',
+    'auth.invalid_password'  => 'Invalid password.',
+    'auth.logout_btn'        => 'Logout',
+    'auth.setup_title'       => 'Set Admin Password',
+    'auth.setup_desc'        => 'Choose a password to protect the dashboard.',
+    'auth.setup_info'        => 'No password is set yet. Create one now to enable authentication.',
+    'auth.setup_new_password' => 'New Password',
+    'auth.setup_confirm'     => 'Confirm Password',
+    'auth.setup_btn'         => 'Set Password',
+    'auth.setup_minlength'   => 'Password must be at least 8 characters.',
+    'auth.setup_mismatch'    => 'Passwords do not match.',
+    'auth.setup_prompt'      => 'Set admin password',
+
     // ── API error messages ─────────────────────────────────────
     'api.action_required'    => 'Action not specified.',
     'api.name_required'      => 'Peer name cannot be empty.',

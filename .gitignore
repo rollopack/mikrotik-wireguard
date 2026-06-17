@@ -1,6 +1,7 @@
 # ── Sensitive Configuration ──────────────────────────────────
 config.php
 .htaccess
+.admin-hash
 
 # ── Project-specific docs ────────────────────────────────────
 AGENTS.md

@@ -148,6 +148,12 @@ Winbox connection: `CHR_IP:30024`
 - **`config.php` is gitignored** — router credentials stay local
 - **Private keys are never stored** on the server after the modal is closed
 - **IP restriction via `.htaccess`** — see `.htaccess.example` for setup instructions
+- **Dashboard authentication** — optional PHP session login. Two ways to set it up:
+  1. **Web setup** (recommended): visit `setup.php` in your browser, enter a password once
+  2. **Manual config**: generate a hash with `php -r "echo password_hash('your_password', PASSWORD_BCRYPT);"` and set it in `config.php` as `'admin_password_hash' => '$2y...'`
+  - When `admin_password_hash` is empty (default), auth is disabled (backwards compatible)
+  - After setup, all pages (`index.php`, `api.php`) require login; unauthenticated API calls return `401 Unauthorized`
+  - See `config.example.php` and `setup.php` for details
 - **display_errors disabled** in production — no PHP error leakage
 - **Intended for LAN use only** — do not expose to the Internet without additional security layers
 
@@ -158,6 +164,8 @@ Winbox connection: `CHR_IP:30024`
 ├── .htaccess.example         # IP restriction template (comments)
 ├── config.php               # Router credentials (gitignored)
 ├── config.example.php       # Configuration template
+├── login.php                # Login page
+├── setup.php                # First-run password setup
 ├── index.php                # Dashboard UI
 ├── screenshots/
 │   ├── Dashboard-1.4.png
@@ -169,6 +177,7 @@ Winbox connection: `CHR_IP:30024`
 │       └── app.js
 ├── src/
 │   ├── api.php                      # AJAX API endpoints
+│   ├── auth.php                     # Session authentication logic
 │   ├── ClientInterface.php          # Common interface for REST/Native clients
 │   ├── ClientFactory.php            # Factory — creates the correct client by api_mode
 │   ├── MikrotikRestClient.php       # REST API client (file_get_contents), implements ClientInterface

@@ -12,14 +12,23 @@ require_once __DIR__ . '/src/ClientFactory.php';
 require_once __DIR__ . '/src/WireGuardManager.php';
 require_once __DIR__ . '/src/i18n.php';
 require_once __DIR__ . '/src/ConfigValidator.php';
+require_once __DIR__ . '/src/auth.php';
 
 $config = require __DIR__ . '/config.php';
+
+if (isset($_GET['logout'])) {
+    logout();
+    header('Location: login.php');
+    exit;
+}
 
 try {
     ConfigValidator::validate($config);
 } catch (InvalidArgumentException $e) {
     ConfigValidator::renderErrorPage($e->getMessage());
 }
+
+requireAuth($config);
 
 $lang = loadLanguage($config['lang'] ?? 'en');
 
@@ -84,6 +93,12 @@ try {
                         ? sprintf(t($lang, 'header.api_native'), $config['native_api']['port'] ?? 8728)
                         : t($lang, 'header.api_rest');
                     echo '<span class="api-mode-badge">' . t($lang, 'header.api_mode') . ' ' . $apiModeLabel . '</span>';
+                    $authEnabled = isAuthEnabled($config);
+                    if ($authEnabled) {
+                        echo '<a href="?logout" class="auth-badge" title="' . t($lang, 'auth.logout_btn') . '">' . t($lang, 'auth.logout_btn') . '</a>';
+                    } else {
+                        echo '<a href="setup.php" class="auth-badge auth-badge-warn">' . t($lang, 'auth.setup_prompt') . '</a>';
+                    }
                 ?>
             </div>
         </header>
