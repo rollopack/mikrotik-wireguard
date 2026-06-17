@@ -4,7 +4,6 @@ config.php
 .admin-hash
 
 # ── Project-specific docs ────────────────────────────────────
-AGENTS.md
 
 # ── Migration data & scripts (local only) ────────────────────
 temp/
@@ -22,3 +21,4 @@ Thumbs.db
 *.swp
 *.swo
 *~
+AGENTS.md

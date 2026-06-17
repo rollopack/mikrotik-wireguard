@@ -23,8 +23,6 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 
 ### PHP
 
-### PHP
-
 | Component | Required | Notes |
 |-----------|----------|-------|
 | PHP | 8.0+ | |
