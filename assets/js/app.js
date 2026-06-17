@@ -593,6 +593,71 @@ function copyToClipboard(elementId) {
         .catch(() => showToast(t('js.code_copy_failed'), true));
 }
 
+/* ── Export VPN IPs Modal ──────────────────────────────────── */
+function openExportVpnIpsModal() {
+    document.getElementById('exportVpnIpsResult').style.display = 'none';
+    document.getElementById('exportVpnIpsFooter').style.display = 'flex';
+    document.getElementById('includeSstpCheck').checked = false;
+    document.getElementById('includePptpCheck').checked = false;
+    const btn = document.getElementById('btnExportVpnIps');
+    btn.disabled = false;
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;margin-right:4px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg> ${t('js.export_vpn_download')}`;
+    document.getElementById('exportVpnIpsModalBackdrop').classList.add('active');
+}
+
+function closeExportVpnIpsModal() {
+    document.getElementById('exportVpnIpsModalBackdrop').classList.remove('active');
+}
+
+async function submitExportVpnIps() {
+    const btn = document.getElementById('btnExportVpnIps');
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> ${t('js.exporting')}`;
+
+    try {
+        const res = await fetch('src/api.php?action=export_vpn_ips', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                include_sstp: document.getElementById('includeSstpCheck').checked,
+                include_pptp: document.getElementById('includePptpCheck').checked
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('exportVpnIpsWgCount').innerText = data.stats.wireguard;
+            document.getElementById('exportVpnIpsSstpCount').innerText = data.stats.sstp;
+            document.getElementById('exportVpnIpsPptpCount').innerText = data.stats.pptp;
+
+            if (data.secret_error) {
+                const errMsg = data.stats.sstp || data.stats.pptp ? t('js.export_warn_sstp') : data.secret_error;
+                document.getElementById('exportVpnIpsSstpCount').innerText = data.stats.sstp > 0 ? data.stats.sstp + ' (' + errMsg + ')' : data.stats.sstp;
+                document.getElementById('exportVpnIpsPptpCount').innerText = data.stats.pptp > 0 ? data.stats.pptp + ' (' + errMsg + ')' : data.stats.pptp;
+            }
+
+            document.getElementById('exportVpnIpsResult').style.display = 'block';
+            document.getElementById('exportVpnIpsFooter').style.display = 'none';
+
+            const url = URL.createObjectURL(new Blob([data.content], { type: 'text/plain;charset=utf-8' }));
+            const a = Object.assign(document.createElement('a'), { href: url, download: data.filename });
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast(t('js.file_downloaded').replace('%s', data.filename));
+        } else {
+            showToast(t('js.export_error').replace('%s', data.error), true);
+            btn.disabled = false;
+            btn.innerHTML = `${t('js.export_vpn_download')}`;
+        }
+    } catch {
+        showToast(t('js.api_error'), true);
+        btn.disabled = false;
+        btn.innerHTML = `${t('js.export_vpn_download')}`;
+    }
+}
+
 /* ── Toast ──────────────────────────────────────────────────── */
 function showToast(message, isError = false) {
     const toast = document.getElementById('toast');

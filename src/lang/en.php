@@ -87,6 +87,19 @@ return [
     'modal.export.download_script' => 'Download .rsc script',
     'modal.export.close'           => 'Close',
 
+    // ── Export VPN IPs Modal ───────────────────────────────────
+    'modal.export_vpn.title'         => 'Export VPN IPs',
+    'modal.export_vpn.description'   => 'Export WireGuard peer IPs (and optionally SSTP user IPs) to a text file.',
+    'modal.export_vpn.include_sstp'  => 'Include SSTP secret IPs',
+    'modal.export_vpn.include_pptp'  => 'Include PPTP secret IPs',
+    'modal.export_vpn.download'      => 'Download',
+    'modal.export_vpn.cancel'        => 'Cancel',
+    'modal.export_vpn.close'         => 'Close',
+    'modal.export_vpn.success_title' => 'Export Completed',
+    'modal.export_vpn.stats_wg'      => 'WireGuard IPs:',
+    'modal.export_vpn.stats_sstp' => 'SSTP:',
+    'modal.export_vpn.stats_pptp' => 'PPTP:',
+
     // ── Toast ──────────────────────────────────────────────────
     'toast.default'          => 'Operation completed successfully!',
 
@@ -104,6 +117,11 @@ return [
     'js.col_endpoint'         => 'Endpoint',
     'js.col_traffic'          => 'Traffic',
     'js.col_actions'          => 'Actions',
+    'js.export_vpn_btn'         => 'Export VPN IPs',
+    'js.export_vpn_download'    => 'Download',
+    'js.exporting'              => 'Exporting...',
+    'js.export_error'           => 'Export error: %s',
+    'js.export_warn_sstp'       => 'Secrets not available (native API mode)',
     'js.regenerate_btn'       => 'Regenerate Key & Download Config',
     'js.script_comment_header' => 'Paste this code in your MikroTik terminal',
     'js.regenerate_error'     => 'Error: %s',

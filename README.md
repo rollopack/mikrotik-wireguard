@@ -14,6 +14,7 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 - **Key Regeneration** — Rotate keys without deleting/recreating peers
 - **Winbox DNAT Port** — Calculate and display the DNAT port for Winbox access to client routers through the CHR (`CHR_IP:DNAT_PORT`). Formula: `dnat_base + third_octet * dnat_multiplier + fourth_octet`, configurable via `config.php`.
 - **Internationalization** — Italian and English UI, switchable via `config.php`
+- **VPN IPs Export** — Download all WireGuard peer IPs (and optionally SSTP secrets) as a text file via the dashboard
 - **Live Status** — Auto-refresh every 10s, real-time handshake/traffic monitoring
 - **Config Validation** — Startup validation with user-friendly error page for misconfiguration
 - **Consistent Error Handling** — All API layers throw exceptions with context
@@ -175,6 +176,7 @@ Winbox connection: `CHR_IP:30024`
 │   ├── get_peer_data.py             # Python bridge: queries RouterOS native API via librouteros
 │   ├── WireGuardManager.php         # Business logic
 │   ├── ConfigValidator.php          # Configuration validation
+│   ├── export-vpn-ips.php           # CLI script: exports peer/SSTP IPs to file
 │   ├── i18n.php                     # Translation helpers
 │   └── lang/
 │       ├── it.php                   # Italian strings

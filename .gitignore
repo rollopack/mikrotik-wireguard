@@ -6,6 +6,7 @@ AGENTS.md
 
 # ── Migration data & scripts (local only) ────────────────────
 temp/
+vpn-ips.txt
 
 # ── Byte-compiled / optimized / DLL files ─────────────────────
 __pycache__/
