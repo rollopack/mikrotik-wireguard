@@ -148,9 +148,10 @@ Winbox connection: `CHR_IP:30024`
 - **`config.php` is gitignored** — router credentials stay local
 - **Private keys are never stored** on the server after the modal is closed
 - **IP restriction via `.htaccess`** — see `.htaccess.example` for setup instructions
-- **Dashboard authentication** — PHP session login, mandatory. Two ways to set it up:
-  1. **Web setup** (recommended): visit `setup.php` in your browser, enter a password once
-  2. **Manual config**: generate a hash with `php -r "echo password_hash('your_password', PASSWORD_BCRYPT);"` and set it in `config.php` as `'admin_password_hash' => '$2y...'`
+- **Dashboard authentication** — PHP session login, mandatory. To set it up:
+  - Visit `setup.php` in your browser, enter a password once
+  - The password hash is stored in `.admin-hash` (gitignored)
+  - Alternative: `php -r "echo password_hash('your_pass', PASSWORD_BCRYPT);" > .admin-hash`
   - Until a password is set, every page redirects to `setup.php`
   - After setup, all pages (`index.php`, `api.php`) require login; unauthenticated API calls return `401 Unauthorized`
   - Session timeout: 30 minutes of inactivity

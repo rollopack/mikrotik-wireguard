@@ -7,29 +7,24 @@ function startSession(): void
     }
 }
 
-function getAdminHash(array $config): ?string
+function getAdminHash(): ?string
 {
-    if (!empty($config['admin_password_hash'])) {
-        return $config['admin_password_hash'];
-    }
-
     $hashFile = __DIR__ . '/../.admin-hash';
     if (file_exists($hashFile)) {
         $hash = trim(file_get_contents($hashFile));
         return $hash !== '' ? $hash : null;
     }
-
     return null;
 }
 
-function isAuthEnabled(array $config): bool
+function isAuthEnabled(): bool
 {
-    return getAdminHash($config) !== null;
+    return getAdminHash() !== null;
 }
 
 function isLoggedIn(array $config): bool
 {
-    if (!isAuthEnabled($config)) {
+    if (!isAuthEnabled()) {
         return false;
     }
 
@@ -58,7 +53,7 @@ function requireAuth(array $config): void
             echo json_encode(['success' => false, 'error' => 'Unauthorized']);
             exit;
         }
-        if (!isAuthEnabled($config)) {
+        if (!isAuthEnabled()) {
             header('Location: setup.php');
             exit;
         }
@@ -69,7 +64,7 @@ function requireAuth(array $config): void
 
 function login(array $config, string $password): bool
 {
-    $hash = getAdminHash($config);
+    $hash = getAdminHash();
     if ($hash === null) {
         return false;
     }

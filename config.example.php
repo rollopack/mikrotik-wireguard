@@ -13,12 +13,6 @@ return [
     // Application Language (en = English, it = Italian)
     'lang' => 'en',
 
-    // Admin password hash for dashboard authentication.
-    // Leave empty ('') and use the web setup at /setup.php to set it up.
-    // To generate manually: php -r "echo password_hash('your_password', PASSWORD_BCRYPT);"
-    // NOTE: Auth is mandatory — the dashboard is inaccessible without a password.
-    'admin_password_hash' => '',
-
     // API Mode: 'rest' | 'native'
     // 'rest'    - RouterOS REST API only (port 443), default, no extra deps
     // 'native'  - RouterOS Native API only (port 8728/8729) via Python bridge

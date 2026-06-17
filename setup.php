@@ -9,7 +9,7 @@ require_once __DIR__ . '/src/i18n.php';
 $config = require __DIR__ . '/config.php';
 $lang = loadLanguage($config['lang'] ?? 'en');
 
-if (isAuthEnabled($config)) {
+if (isAuthEnabled()) {
     header('Location: login.php');
     exit;
 }
