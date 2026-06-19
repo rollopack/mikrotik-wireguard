@@ -510,13 +510,13 @@ add name="wg-resnovae" private-key="${privateKey}" mtu=1420
 add interface="wg-resnovae" public-key="${serverPubKey}" \\
     endpoint-address="${endpointHost}" endpoint-port=${endpointPort} \\
     allowed-address="${AppConfig.clientAllowedIps}" persistent-keepalive=25s \\
-    comment="ResNovae VPN Server"
+    comment="${AppConfig.comment || AppConfig.interface}"
 
 /ip address
 add address="${exportPeerIp}/21" network="3.0.0.0" interface="wg-resnovae"
 
 /ip firewall address-list
-add address=3.0.0.1 list=MANAGEMENT`;
+add address=${AppConfig.serverIp} list=MANAGEMENT`;
 
     document.getElementById('code-export-conf-text').innerText = confContent;
     document.getElementById('code-export-script-text').innerText = scriptContent;

@@ -46,4 +46,9 @@ return [
     // Adjust these if the default range (30000-65535) doesn't fit your subnet
     'dnat_base' => 30000,
     'dnat_multiplier' => 1000,
+
+    // WireGuard Peer Comment
+    // Comment set on the peer connection on the MikroTik.
+    // If empty or omitted, falls back to the 'interface' value.
+    'comment' => 'ResNovae VPN Server',
 ];

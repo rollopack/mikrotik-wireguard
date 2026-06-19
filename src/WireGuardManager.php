@@ -255,12 +255,17 @@ class WireGuardManager {
             $this->config['client_allowed_ips']
         );
 
+        $comment = $this->config['comment'] ?? $this->config['interface'];
+
         $clientScript = self::generateRscScript(
             $clientIp,
             $clientKeys['private_key'],
             $serverPublicKey,
             $this->config['endpoint'],
-            $this->config['client_allowed_ips']
+            $this->config['client_allowed_ips'],
+            'wg-resnovae',
+            $comment,
+            $this->config['server_ip'] ?? '3.0.0.1'
         );
 
         return [
@@ -347,11 +352,14 @@ INI;
         string $serverPublicKey,
         string $serverEndpoint,
         string $clientAllowedIps,
-        string $interfaceName = "wg-resnovae"
+        string $interfaceName = "wg-resnovae",
+        ?string $comment = null,
+        string $serverIp = '3.0.0.1'
     ): string {
         $endpointParts = explode(':', $serverEndpoint);
         $endpointHost = $endpointParts[0] ?? '';
         $endpointPort = $endpointParts[1] ?? '13231';
+        $comment = $comment ?: $interfaceName;
         
         return <<<RSC
 # --- MikroTik Client Setup Script ---
@@ -364,13 +372,13 @@ add name="$interfaceName" private-key="$clientPrivateKey" mtu=1420
 add interface="$interfaceName" public-key="$serverPublicKey" \\
     endpoint-address="$endpointHost" endpoint-port=$endpointPort \\
     allowed-address="$clientAllowedIps" persistent-keepalive=25s \\
-    comment="ResNovae VPN Server"
+    comment="$comment"
 
 /ip address
 add address="$clientIp/21" network="3.0.0.0" interface="$interfaceName"
 
 /ip firewall address-list
-add address=3.0.0.1 list=MANAGEMENT
+add address=$serverIp list=MANAGEMENT
 RSC;
     }
 }

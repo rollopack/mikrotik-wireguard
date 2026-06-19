@@ -80,6 +80,7 @@ See `config.example.php` for all available options:
 | `ssl_verify` | Verify SSL certificate (`false` for self-signed) |
 | `native_api` | Sub-array with `port`, `tls`, `python_script` for native mode |
 | `interface` | WireGuard interface name on the router |
+| `comment` | Comment set on peer connections (falls back to `interface` if empty) |
 | `subnet` | WireGuard subnet in CIDR (e.g. `3.0.0.0/21`) |
 | `server_ip` | Server IP inside the subnet |
 | `endpoint` | Public endpoint for client connections (e.g. `vpn.example.com:13231`) |
