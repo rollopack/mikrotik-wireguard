@@ -15,7 +15,7 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 - **Winbox DNAT Port** — Calculate and display the DNAT port for Winbox access to client routers through the CHR (`CHR_IP:DNAT_PORT`). Formula: `dnat_base + third_octet * dnat_multiplier + fourth_octet`, configurable via `config.php`.
 - **Internationalization** — Italian and English UI, switchable via `config.php`
 - **VPN IPs Export** — Download all WireGuard peer IPs (and optionally SSTP secrets) as a text file via the dashboard
-- **Live Status** — Auto-refresh every 10s, real-time handshake/traffic monitoring
+- **Live Status** — Configurable auto-refresh (default 30s), real-time handshake/traffic monitoring
 - **Config Validation** — Startup validation with user-friendly error page for misconfiguration
 - **Consistent Error Handling** — All API layers throw exceptions with context
 
@@ -85,6 +85,7 @@ See `config.example.php` for all available options:
 | `server_ip` | Server IP inside the subnet |
 | `endpoint` | Public endpoint for client connections (e.g. `vpn.example.com:13231`) |
 | `client_allowed_ips` | Allowed IPs in generated client configs |
+| `refresh_interval` | Dashboard auto-refresh interval in seconds (default: `30`) |
 | `dnat_base` | Base port for the DNAT formula (default: `30000`) |
 | `dnat_multiplier` | Third octet multiplier in the DNAT formula (default: `1000`) |
 

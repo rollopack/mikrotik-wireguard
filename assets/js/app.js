@@ -34,12 +34,12 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPeers().then(() => updateSortIcons());
     document.getElementById('searchInput').addEventListener('input', () => applyFiltersAndSort());
 
-    // Auto-refresh every 30 seconds (pause when modals are open)
+    // Auto-refresh (pause when modals are open)
     setInterval(() => {
         const anyModalOpen = ['addModalBackdrop', 'editModalBackdrop', 'deleteModalBackdrop', 'exportModalBackdrop']
             .some(id => document.getElementById(id)?.classList.contains('active'));
         if (!anyModalOpen) refreshPeers();
-    }, 10000);
+    }, AppConfig.refreshInterval);
 });
 
 /* ── Data Loading ───────────────────────────────────────────── */

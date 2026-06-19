@@ -51,4 +51,9 @@ return [
     // Comment set on the peer connection on the MikroTik.
     // If empty or omitted, falls back to the 'interface' value.
     'comment' => 'ResNovae VPN Server',
+
+    // Dashboard Auto-Refresh Interval (seconds)
+    // How often the peer list refreshes. Higher values reduce CHR load.
+    // Default: 30
+    'refresh_interval' => 30,
 ];

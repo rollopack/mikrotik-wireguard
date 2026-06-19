@@ -429,6 +429,7 @@ try {
             serverPublicKey: '',
             dnatBase: <?php echo json_encode($config['dnat_base'] ?? 30000); ?>,
             dnatMultiplier: <?php echo json_encode($config['dnat_multiplier'] ?? 1000); ?>,
+            refreshInterval: <?php echo json_encode(($config['refresh_interval'] ?? 30) * 1000); ?>,
             translations: <?php echo json_encode(jsTranslations($lang), JSON_UNESCAPED_UNICODE); ?>,
             csrfToken: <?php echo json_encode(getCsrfToken()); ?>,
         };
