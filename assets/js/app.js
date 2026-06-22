@@ -15,6 +15,7 @@ let allPeers = [];
 let peerToDeleteId = null;
 let currentSort = { field: 'name', dir: 'asc' };
 let hideOffline = localStorage.getItem('hideOffline') !== 'false';
+let searchQuery = localStorage.getItem('searchQuery') || '';
 let highlightId = null;
 let pendingHighlightId = null;
 
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
         label.innerText = t('js.show_all');
     }
 
+    document.getElementById('searchInput').value = searchQuery;
     loadPeers().then(() => updateSortIcons());
     document.getElementById('searchInput').addEventListener('input', () => applyFiltersAndSort());
 
@@ -101,6 +103,10 @@ function applyFiltersAndSort() {
     document.getElementById('stat-total-peers').innerText = allPeers.length;
 
     const query = document.getElementById('searchInput').value.toLowerCase().trim();
+    if (searchQuery !== query) {
+        searchQuery = query;
+        localStorage.setItem('searchQuery', query);
+    }
     let result = allPeers;
 
     if (query) {
