@@ -215,7 +215,9 @@ class WireGuardManagerTest extends TestCase {
 
     public function testAddPeer() {
         $mockClient = new MockMikrotikRestClient();
-        // Mock getPeers response (empty)
+        // Mock getPeers response (empty) — first call: unfiltered request() for IP allocation
+        $mockClient->setResponse('GET', '/interface/wireguard/peers', []);
+        // Mock getPeers response (empty) — second call: via getPeers() for peer ID lookup
         $mockClient->setResponse('GET', '/interface/wireguard/peers', []);
         // Mock getServerPublicKey response
         $mockClient->setResponse('GET', '/interface/wireguard', [

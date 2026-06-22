@@ -216,9 +216,10 @@ class WireGuardManager {
      * @throws Exception on API error or subnet full
      */
     public function addPeer(string $name): array {
-        // 1. Get peers to calculate next free IP
-        $peers = $this->getPeers();
-        $clientIp = $this->calculateNextFreeIp($peers);
+        // 1. Get ALL peers (unfiltered by interface) to avoid IP collisions
+        //    with peers that may have lost their interface reference
+        $allPeers = $this->client->request('GET', '/interface/wireguard/peers');
+        $clientIp = $this->calculateNextFreeIp($allPeers);
 
         // 2. Generate client keys
         $clientKeys = self::generateKeyPair();

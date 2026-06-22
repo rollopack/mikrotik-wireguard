@@ -2,6 +2,7 @@
 config.php
 .htaccess
 .admin-hash
+.history/
 
 # ── Project-specific docs ────────────────────────────────────
 
