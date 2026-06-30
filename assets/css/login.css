@@ -1,0 +1,92 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Outfit', sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1a2332 100%);
+    color: #e2e8f0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.login-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+}
+.login-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #3b82f6;
+    margin: 0 auto 1.5rem;
+}
+.login-icon svg {
+    width: 22px;
+    height: 22px;
+    color: #fff;
+}
+.login-card h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+.login-card p {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+.divider {
+    border: none;
+    border-top: 1px solid #334155;
+    margin: 1.25rem 0;
+}
+.form-group { margin-bottom: 1.25rem; }
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-bottom: 0.4rem;
+}
+.form-group input {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.form-group input:focus { border-color: #3b82f6; }
+.btn {
+    width: 100%;
+    padding: 0.7rem 1.2rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: #3b82f6;
+    color: #fff;
+    transition: background 0.2s;
+}
+.btn:hover { background: #2563eb; }
+.error-msg {
+    background: #7f1d1d;
+    color: #fca5a5;
+    padding: 0.6rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}

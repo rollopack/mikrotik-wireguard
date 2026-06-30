@@ -40,82 +40,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Outfit', sans-serif;
-            background: #0f172a;
-            color: #e2e8f0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .login-card {
-            background: #1e293b;
-            border: 1px solid #334155;
-            border-radius: 12px;
-            padding: 2.5rem;
-            width: 100%;
-            max-width: 400px;
-        }
-        .login-card h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-        .login-card p {
-            color: #94a3b8;
-            font-size: 0.9rem;
-            margin-bottom: 1.5rem;
-        }
-        .form-group { margin-bottom: 1.25rem; }
-        .form-group label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #94a3b8;
-            margin-bottom: 0.4rem;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 0.7rem 0.9rem;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 8px;
-            color: #e2e8f0;
-            font-size: 0.95rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .form-group input:focus { border-color: #3b82f6; }
-        .btn {
-            width: 100%;
-            padding: 0.7rem 1.2rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            background: #3b82f6;
-            color: #fff;
-            transition: background 0.2s;
-        }
-        .btn:hover { background: #2563eb; }
-        .error-msg {
-            background: #7f1d1d;
-            color: #fca5a5;
-            padding: 0.6rem 0.9rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            margin-bottom: 1rem;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/login.css">
 </head>
 <body>
     <div class="login-card">
+        <div class="login-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+            </svg>
+        </div>
         <h1><?php echo t($lang, 'auth.login_title'); ?></h1>
         <p><?php echo t($lang, 'site.description'); ?></p>
+
+        <hr class="divider">
 
         <?php if ($error): ?>
             <div class="error-msg"><?php echo htmlspecialchars($error); ?></div>

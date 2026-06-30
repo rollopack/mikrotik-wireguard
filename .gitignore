@@ -23,3 +23,4 @@ Thumbs.db
 *.swo
 *~
 AGENTS.md
+src/cleanup_nat.php
