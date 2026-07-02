@@ -69,7 +69,7 @@ class WireGuardManager {
             return 'never';
         }
         // Add space between time units: 20h44m42s -> 20h 44m 42s
-        return preg_replace('/(\d+)([dhms])/', '$1$2 ', $duration);
+        return rtrim(preg_replace('/(\d+)([dhms])/', '$1$2 ', $duration));
     }
 
     /**

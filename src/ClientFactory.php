@@ -25,7 +25,7 @@ class ClientFactory
                 if (empty($config['native_api'])) {
                     throw new InvalidArgumentException("native_api configuration required for api_mode='$mode'");
                 }
-                return new MikrotikApiClient($config, $mode);
+                return new MikrotikApiClient($config);
             
             default:
                 throw new InvalidArgumentException("Unknown api_mode: '$mode'. Supported: rest, native");

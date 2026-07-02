@@ -23,9 +23,9 @@ requireAuth($config);
 
 $lang = loadLanguage($config['lang'] ?? 'en');
 
+
 $client = ClientFactory::create($config);
 $manager = new WireGuardManager($client, $config);
-$manager->getServerPublicKey();
 
 header('Content-Type: application/json');
 

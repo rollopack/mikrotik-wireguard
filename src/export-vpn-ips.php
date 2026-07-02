@@ -32,7 +32,7 @@ try {
     });
 
     // SSTP secrets
-    $secrets = $client->request('GET', '/ppp/secret');
+    $secrets = $client->getPppSecrets();
     $sstpIps = [];
     foreach ($secrets as $secret) {
         $disabled = $secret['disabled'] ?? 'no';

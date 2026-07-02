@@ -14,6 +14,15 @@ class TestCase {
         }
     }
 
+    public function assertNotEquals($unexpected, $actual, string $message = '') {
+        $this->assertions++;
+        if ($unexpected === $actual) {
+            $unexpectedStr = var_export($unexpected, true);
+            $actualStr = var_export($actual, true);
+            throw new Exception("Assertion failed: Not expected $unexpectedStr. $message");
+        }
+    }
+
     public function assertTrue($condition, string $message = '') {
         $this->assertions++;
         if (!$condition) {
@@ -50,12 +59,27 @@ class TestCase {
         }
     }
 
+    public function assertCount(int $expected, $haystack, string $message = '') {
+        $this->assertions++;
+        $actual = is_array($haystack) || $haystack instanceof Countable ? count($haystack) : 0;
+        if ($expected !== $actual) {
+            throw new Exception("Assertion failed: Expected count $expected, got $actual. $message");
+        }
+    }
+
     public function assertEqualsIgnoringCase($expected, $actual, string $message = '') {
         $this->assertions++;
         if (strcasecmp((string)$expected, (string)$actual) !== 0) {
             $expectedStr = var_export($expected, true);
             $actualStr = var_export($actual, true);
             throw new Exception("Assertion failed: Expected $expectedStr (case-insensitive), got $actualStr. $message");
+        }
+    }
+
+    public function assertStringStartsWith(string $prefix, string $string, string $message = '') {
+        $this->assertions++;
+        if (strncmp($string, $prefix, strlen($prefix)) !== 0) {
+            throw new Exception("Assertion failed: \"$string\" does not start with \"$prefix\". $message");
         }
     }
 

@@ -5,12 +5,10 @@ require_once __DIR__ . '/ClientInterface.php';
 class MikrotikApiClient implements ClientInterface
 {
     private array $config;
-    private string $mode;
     
-    public function __construct(array $config, string $mode = 'native')
+    public function __construct(array $config)
     {
         $this->config = $config;
-        $this->mode = $mode;
     }
     
     public function request(string $method, string $path, ?array $data = null): array
@@ -115,7 +113,7 @@ class MikrotikApiClient implements ClientInterface
         return $filteredPeers;
     }
     
-    private function queryNativeApi(array $peerNames = [], string $action = 'get_peers', array $extraData = []): array
+    protected function queryNativeApi(array $peerNames = [], string $action = 'get_peers', array $extraData = []): array
     {
         $nativeConfig = $this->config['native_api'] ?? [];
         
