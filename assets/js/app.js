@@ -182,7 +182,12 @@ function getSortedPeers(peers) {
 
 function ipToNum(addr) {
     const ip = (addr.split('/')[0] || '0.0.0.0').split('.');
-    return ip.reduce((acc, oct) => (acc << 8) + parseInt(oct, 10), 0) >>> 0;
+    if (ip.length !== 4) return 0;
+    return ip.reduce((acc, oct) => {
+        const n = parseInt(oct, 10);
+        if (isNaN(n) || n < 0 || n > 255) return 0;
+        return (acc << 8) + n;
+    }, 0) >>> 0;
 }
 
 function updateSortIcons() {
@@ -292,8 +297,25 @@ function renderPeers(peers) {
     document.getElementById('stat-active-peers').innerText = activeCount;
 }
 
+/* ── Session check ───────────────────────────────────────────── */
+async function checkSession() {
+    try {
+        const res = await fetch('src/api.php?action=check_session');
+        const data = await res.json();
+        if (!data.success) {
+            window.location.href = 'login.php';
+            return false;
+        }
+        return true;
+    } catch {
+        window.location.href = 'login.php';
+        return false;
+    }
+}
+
 /* ── Add Peer Modal ─────────────────────────────────────────── */
-function openAddModal() {
+async function openAddModal() {
+    if (!(await checkSession())) return;
     pendingHighlightId = null;
     highlightId = null;
     document.getElementById('modalFormContent').style.display = 'block';
@@ -388,7 +410,8 @@ function setupDownload(el, filename, content) {
 }
 
 /* ── Edit Peer Modal ────────────────────────────────────────── */
-function openEditModal(id, name) {
+async function openEditModal(id, name) {
+    if (!(await checkSession())) return;
     pendingHighlightId = null;
     highlightId = null;
     document.getElementById('editPeerId').value = id;
@@ -427,7 +450,8 @@ async function submitEditPeer(event) {
 }
 
 /* ── Delete Peer Modal ──────────────────────────────────────── */
-function openDeleteModal(id, name) {
+async function openDeleteModal(id, name) {
+    if (!(await checkSession())) return;
     peerToDeleteId = id;
     document.getElementById('deletePeerNameText').innerText = name;
     const btn = document.getElementById('btnConfirmDelete');
@@ -467,7 +491,8 @@ let exportPeerId = null;
 let exportPeerName = null;
 let exportPeerIp = null;
 
-function openExportModal(id, name, allowedAddress) {
+async function openExportModal(id, name, allowedAddress) {
+    if (!(await checkSession())) return;
     exportPeerId = id;
     exportPeerName = name;
     exportPeerIp = allowedAddress.split('/')[0];
@@ -494,10 +519,13 @@ function updateExportConfig(privateKey) {
     const endpointParts = AppConfig.endpoint.split(':');
     const endpointHost = endpointParts[0] || '';
     const endpointPort = endpointParts[1] || '13231';
+    const subnetParts = (AppConfig.subnet || '3.0.0.0/21').split('/');
+    const subnetNetwork = subnetParts[0];
+    const subnetMask = subnetParts[1] || '21';
 
     const confContent = `[Interface]
 PrivateKey = ${privateKey}
-Address = ${exportPeerIp}/21
+Address = ${exportPeerIp}/${subnetMask}
 DNS = 1.1.1.1
 
 [Peer]
@@ -519,7 +547,7 @@ add interface="wg-resnovae" public-key="${serverPubKey}" \\
     comment="${AppConfig.comment || AppConfig.interface}"
 
 /ip address
-add address="${exportPeerIp}/21" network="3.0.0.0" interface="wg-resnovae"
+add address="${exportPeerIp}/${subnetMask}" network="${subnetNetwork}" interface="wg-resnovae"
 
 /ip firewall address-list
 add address=${AppConfig.serverIp} list=MANAGEMENT`;
@@ -601,7 +629,8 @@ function copyToClipboard(elementId) {
 }
 
 /* ── Export VPN IPs Modal ──────────────────────────────────── */
-function openExportVpnIpsModal() {
+async function openExportVpnIpsModal() {
+    if (!(await checkSession())) return;
     document.getElementById('exportVpnIpsResult').style.display = 'none';
     document.getElementById('exportVpnIpsFooter').style.display = 'flex';
     document.getElementById('includeSstpCheck').checked = false;

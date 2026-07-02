@@ -44,6 +44,11 @@ try {
         exit;
     }
 
+    if ($_GET['action'] === 'check_session') {
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     requireCsrf();
 
     if ($_GET['action'] === 'add_peer') {

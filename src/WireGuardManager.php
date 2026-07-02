@@ -151,19 +151,7 @@ class WireGuardManager {
      * @throws Exception
      */
     public function getServerPublicKey(): string {
-        // If client implements ClientInterface, use its getServerPublicKey()
-        if ($this->client instanceof ClientInterface) {
-            return $this->client->getServerPublicKey();
-        }
-
-        // Fallback: REST API path
-        $interfaces = $this->client->request('GET', '/interface/wireguard');
-        foreach ($interfaces as $iface) {
-            if (($iface['name'] ?? '') === $this->config['interface']) {
-                return $iface['public-key'] ?? '';
-            }
-        }
-        throw new Exception("WireGuard interface '" . $this->config['interface'] . "' not found on the MikroTik CHR.");
+        return $this->client->getServerPublicKey();
     }
 
     /**
@@ -173,39 +161,7 @@ class WireGuardManager {
      * @throws Exception on API error
      */
     public function getPeers(): array {
-        // If client implements ClientInterface, use its getPeers() (supports native/hybrid API)
-        if ($this->client instanceof ClientInterface) {
-            return $this->client->getPeers();
-        }
-
-        // Fallback: REST API path (original logic)
-        $peers = $this->client->request('GET', '/interface/wireguard/peers');
-        $interfaceFilter = $this->config['interface'];
-
-        // Only extract fields needed by the frontend to reduce payload size
-        $allowedFields = ['.id', 'name', 'allowed-address', 'last-handshake',
-                          'current-endpoint-address', 'public-key'];
-
-        $filteredPeers = [];
-        foreach ($peers as $peer) {
-            if (($peer['interface'] ?? '') !== $interfaceFilter) {
-                continue;
-            }
-
-            $out = [];
-            foreach ($allowedFields as $f) {
-                if (isset($peer[$f])) {
-                    $out[$f] = $peer[$f];
-                }
-            }
-            $out['rx_formatted'] = self::formatBytes($peer['rx'] ?? 0);
-            $out['tx_formatted'] = self::formatBytes($peer['tx'] ?? 0);
-            $out['handshake_formatted'] = $peer['last-handshake'] ?? 'never';
-
-            $filteredPeers[] = $out;
-        }
-
-        return $filteredPeers;
+        return $this->client->getPeers();
     }
 
     /**
@@ -266,7 +222,8 @@ class WireGuardManager {
             $this->config['client_allowed_ips'],
             'wg-resnovae',
             $comment,
-            $this->config['server_ip'] ?? '3.0.0.1'
+            $this->config['server_ip'] ?? '3.0.0.1',
+            $this->config['subnet'] ?? '3.0.0.0/21'
         );
 
         return [
@@ -355,13 +312,18 @@ INI;
         string $clientAllowedIps,
         string $interfaceName = "wg-resnovae",
         ?string $comment = null,
-        string $serverIp = '3.0.0.1'
+        string $serverIp = '3.0.0.1',
+        string $subnet = '3.0.0.0/21'
     ): string {
         $endpointParts = explode(':', $serverEndpoint);
         $endpointHost = $endpointParts[0] ?? '';
         $endpointPort = $endpointParts[1] ?? '13231';
         $comment = $comment ?: $interfaceName;
-        
+
+        $subnetParts = explode('/', $subnet);
+        $networkAddress = $subnetParts[0];
+        $mask = $subnetParts[1] ?? '21';
+
         return <<<RSC
 # --- MikroTik Client Setup Script ---
 # paste this code into your MikroTik Terminal
@@ -376,7 +338,7 @@ add interface="$interfaceName" public-key="$serverPublicKey" \\
     comment="$comment"
 
 /ip address
-add address="$clientIp/21" network="3.0.0.0" interface="$interfaceName"
+add address="$clientIp/$mask" network="$networkAddress" interface="$interfaceName"
 
 /ip firewall address-list
 add address=$serverIp list=MANAGEMENT

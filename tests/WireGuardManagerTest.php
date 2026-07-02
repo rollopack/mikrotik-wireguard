@@ -51,29 +51,14 @@ class MockMikrotikRestClient implements ClientInterface {
                     $out[$f] = $peer[$f];
                 }
             }
-            $out['rx_formatted'] = self::formatBytes($peer['rx'] ?? 0);
-            $out['tx_formatted'] = self::formatBytes($peer['tx'] ?? 0);
-            $out['handshake_formatted'] = $peer['last-handshake'] ?? 'never';
+            $out['rx_formatted'] = WireGuardManager::formatBytes($peer['rx'] ?? 0);
+            $out['tx_formatted'] = WireGuardManager::formatBytes($peer['tx'] ?? 0);
+            $out['handshake_formatted'] = WireGuardManager::formatHandshake($peer['last-handshake'] ?? '');
 
             $filteredPeers[] = $out;
         }
 
         return $filteredPeers;
-    }
-
-    private static function formatBytes(int|float $bytes): string {
-        if (is_numeric($bytes)) {
-            $bytes = (float) $bytes;
-            $units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
-            $pow = 0;
-            if ($bytes > 0) {
-                $pow = min(floor(log($bytes, 1024)), count($units) - 1);
-                $bytes /= pow(1024, $pow);
-            }
-            return number_format($bytes, 2, '.', '') . ' ' . $units[$pow];
-        }
-        
-        return '0.00 B';
     }
 
     public function getServerPublicKey(): string {

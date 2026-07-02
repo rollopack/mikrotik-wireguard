@@ -28,28 +28,6 @@ class MikrotikApiClient implements ClientInterface
         return $this->restClient->request($method, $path, $data);
     }
 
-    /**
-     * Format bytes to human-readable string.
-     *
-     * @param int $bytes
-     * @return string
-     */
-    private static function formatBytes(int $bytes): string
-    {
-        if (is_numeric($bytes)) {
-            $bytes = (float) $bytes;
-            $units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
-            $pow = 0;
-            if ($bytes > 0) {
-                $pow = min(floor(log($bytes, 1024)), count($units) - 1);
-                $bytes /= pow(1024, $pow);
-            }
-            return number_format($bytes, 2, '.', '') . ' ' . $units[$pow];
-        }
-
-        return '0.00 B';
-    }
-    
     public function getPeers(): array
     {
         return $this->getPeersViaNativeApi();
@@ -201,8 +179,8 @@ class MikrotikApiClient implements ClientInterface
             ];
             
             $peer['handshake_formatted'] = WireGuardManager::formatHandshake($peer['last-handshake'] ?? '');
-            $peer['rx_formatted'] = self::formatBytes((int)($peer['rx'] ?? 0));
-            $peer['tx_formatted'] = self::formatBytes((int)($peer['tx'] ?? 0));
+            $peer['rx_formatted'] = WireGuardManager::formatBytes((int)($peer['rx'] ?? 0));
+            $peer['tx_formatted'] = WireGuardManager::formatBytes((int)($peer['tx'] ?? 0));
             
             $filteredPeers[] = $peer;
         }

@@ -30,7 +30,6 @@ try {
 
 requireAuth($config);
 
-$cspNonce = base64_encode(random_bytes(16));
 header("Content-Security-Policy: default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:;");
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
@@ -427,6 +426,7 @@ try {
             comment: <?php echo json_encode($config['comment'] ?? ''); ?>,
             serverIp: <?php echo json_encode($config['server_ip']); ?>,
             serverPublicKey: '',
+            subnet: <?php echo json_encode($config['subnet']); ?>,
             dnatBase: <?php echo json_encode($config['dnat_base'] ?? 30000); ?>,
             dnatMultiplier: <?php echo json_encode($config['dnat_multiplier'] ?? 1000); ?>,
             refreshInterval: <?php echo json_encode(($config['refresh_interval'] ?? 30) * 1000); ?>,

@@ -194,7 +194,10 @@ Winbox connection: `CHR_IP:30024`
 │       └── en.php                   # English strings
 └── tests/
     ├── run_tests.php
-    └── WireGuardManagerTest.php
+    ├── WireGuardManagerTest.php
+    ├── ConfigValidatorTest.php
+    ├── MikrotikRestClientTest.php
+    └── authTest.php
 ```
 
 ## Testing
@@ -203,7 +206,7 @@ Winbox connection: `CHR_IP:30024`
 php tests/run_tests.php
 ```
 
-Uses a mock REST client — no real router needed. 42 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD operations (add, update, delete, regenerate key).
+Uses a mock REST client — no real router needed. 97 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD, config validation, URL construction, authentication, and session management across 59 tests.
 
 > **Disclaimer:** This software is provided "as is" without warranty of any kind. The author assumes no responsibility for any direct or indirect damages arising from its use. Use at your own risk.
 

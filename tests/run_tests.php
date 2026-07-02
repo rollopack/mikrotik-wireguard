@@ -1,6 +1,7 @@
 <?php
 // Custom mini-PHPUnit test runner
 
+if (!class_exists('TestCase')) {
 class TestCase {
     protected int $assertions = 0;
 
@@ -34,9 +35,34 @@ class TestCase {
         }
     }
 
+    public function assertNull($value, string $message = '') {
+        $this->assertions++;
+        if ($value !== null) {
+            $expectedStr = var_export($value, true);
+            throw new Exception("Assertion failed: Expected null, got $expectedStr. $message");
+        }
+    }
+
+    public function assertNotNull($value, string $message = '') {
+        $this->assertions++;
+        if ($value === null) {
+            throw new Exception("Assertion failed: Expected not null. $message");
+        }
+    }
+
+    public function assertEqualsIgnoringCase($expected, $actual, string $message = '') {
+        $this->assertions++;
+        if (strcasecmp((string)$expected, (string)$actual) !== 0) {
+            $expectedStr = var_export($expected, true);
+            $actualStr = var_export($actual, true);
+            throw new Exception("Assertion failed: Expected $expectedStr (case-insensitive), got $actualStr. $message");
+        }
+    }
+
     public function getAssertionCount(): int {
         return $this->assertions;
     }
+}
 }
 
 // Autoloader for src classes
@@ -47,10 +73,8 @@ spl_autoload_register(function ($class) {
     }
 });
 
-// Run all test files
-$testFiles = [
-    __DIR__ . '/WireGuardManagerTest.php'
-];
+// Auto-discover all test files
+$testFiles = glob(__DIR__ . '/*Test.php');
 
 $passed = 0;
 $failed = 0;
@@ -98,6 +122,10 @@ foreach ($testFiles as $file) {
                         }
                         
                         $instance->$methodName();
+
+                        if (method_exists($instance, 'tearDown')) {
+                            $instance->tearDown();
+                        }
                         echo "\033[32m[PASS]\033[0m\n";
                         $passed++;
                     } catch (Exception $e) {
