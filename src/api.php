@@ -131,7 +131,7 @@ try {
         $fetchSecretIps = function (string $service) use ($client, &$secretError): array {
             $ips = [];
             try {
-                $secrets = $client->request('GET', '/ppp/secret');
+                $secrets = $client->getPppSecrets();
                 foreach ($secrets as $secret) {
                     $disabled = $secret['disabled'] ?? 'no';
                     if (($secret['service'] ?? '') === $service && $disabled !== 'yes' && $disabled !== 'true') {
@@ -149,7 +149,7 @@ try {
 
             if (count($ips) === 0 && $secretError === null) {
                 try {
-                    $active = $client->request('GET', '/ppp/active');
+                    $active = $client->getPppActive();
                     foreach ($active as $session) {
                         if (($session['service'] ?? '') === $service) {
                             $addr = $session['address'] ?? $session['remote-address'] ?? '';

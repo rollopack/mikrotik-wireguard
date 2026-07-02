@@ -160,6 +160,117 @@ class ConfigValidatorTest extends TestCase {
         $this->assertTrue(true);
     }
 
+    public function testValidNativeApiConfig() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = [
+            'port' => 8728,
+            'tls' => false,
+            'python_script' => __DIR__ . '/../src/get_peer_data.py',
+        ];
+        ConfigValidator::validate($config);
+        $this->assertTrue(true);
+    }
+
+    public function testValidNativeApiConfigWithTls() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = [
+            'port' => 8729,
+            'tls' => true,
+            'python_script' => __DIR__ . '/../src/get_peer_data.py',
+        ];
+        ConfigValidator::validate($config);
+        $this->assertTrue(true);
+    }
+
+    public function testNativeApiConfigRequiredWhenNativeMode() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $this->expectValidationException("native_api configuration required", $config);
+    }
+
+    public function testNativeApiConfigMustBeArray() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = 'not-an-array';
+        $this->expectValidationException("native_api configuration required", $config);
+    }
+
+    public function testNativeApiPortRequired() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = [
+            'tls' => false,
+            'python_script' => __DIR__ . '/../src/get_peer_data.py',
+        ];
+        $this->expectValidationException("native_api.port must be an integer", $config);
+    }
+
+    public function testNativeApiPortMustBe8728or8729() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = [
+            'port' => 9999,
+            'tls' => false,
+            'python_script' => __DIR__ . '/../src/get_peer_data.py',
+        ];
+        $this->expectValidationException("native_api.port must be 8728 (plain) or 8729 (TLS)", $config);
+    }
+
+    public function testNativeApiTlsRequired() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = [
+            'port' => 8728,
+            'python_script' => __DIR__ . '/../src/get_peer_data.py',
+        ];
+        $this->expectValidationException("native_api.tls must be a boolean", $config);
+    }
+
+    public function testNativeApiTlsTrueRequiresPort8729() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = [
+            'port' => 8728,
+            'tls' => true,
+            'python_script' => __DIR__ . '/../src/get_peer_data.py',
+        ];
+        $this->expectValidationException("When native_api.tls is true, native_api.port must be 8729", $config);
+    }
+
+    public function testNativeApiTlsFalseRequiresPort8728() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = [
+            'port' => 8729,
+            'tls' => false,
+            'python_script' => __DIR__ . '/../src/get_peer_data.py',
+        ];
+        $this->expectValidationException("When native_api.tls is false, native_api.port should be 8728", $config);
+    }
+
+    public function testNativeApiPythonScriptRequired() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = [
+            'port' => 8728,
+            'tls' => false,
+        ];
+        $this->expectValidationException("native_api.python_script must be a non-empty string", $config);
+    }
+
+    public function testNativeApiPythonScriptMustExist() {
+        $config = $this->validConfig;
+        $config['api_mode'] = 'native';
+        $config['native_api'] = [
+            'port' => 8728,
+            'tls' => false,
+            'python_script' => '/nonexistent/path.py',
+        ];
+        $this->expectValidationException("native_api.python_script file not found", $config);
+    }
+
     private function expectValidationException(string $expectedMessage, array $config): void {
         $threw = false;
         try {

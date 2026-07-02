@@ -96,7 +96,7 @@ The dashboard supports two API modes for connecting to the MikroTik CHR. Set `ap
 | Mode | Description | Requirements |
 |------|-------------|--------------|
 | `rest` (default) | RouterOS REST API (HTTPS, port 443). Simple, no extra deps. | `allow_url_fopen=On`, PHP 8.0+ |
-| `native` | Full RouterOS Native API (port 8728/8729) via Python bridge. Alternative if REST is unavailable. | Python 3.8+, `librouteros`, native API port 8728/8729 open |
+| `native` | Full RouterOS Native API (port 8728/8729) via Python bridge. Alternative if REST is unavailable. Slower than REST due to Python bridge overhead. | Python 3.8+, `librouteros`, native API port 8728/8729 open |
 
 ### `native` mode
 

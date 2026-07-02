@@ -160,6 +160,33 @@ class MikrotikRestClient implements ClientInterface {
     }
 
     /**
+     * Get ALL WireGuard peers without interface filtering.
+     * Used for IP allocation to avoid collisions across interfaces.
+     *
+     * @return array List of all peers with normalized fields.
+     * @throws Exception on failure.
+     */
+    public function getAllPeers(): array
+    {
+        $peers = $this->request('GET', '/interface/wireguard/peers');
+        
+        $allowedFields = ['.id', 'name', 'allowed-address', 'interface', 'public-key'];
+        
+        $result = [];
+        foreach ($peers as $peer) {
+            $out = [];
+            foreach ($allowedFields as $f) {
+                if (isset($peer[$f])) {
+                    $out[$f] = $peer[$f];
+                }
+            }
+            $result[] = $out;
+        }
+        
+        return $result;
+    }
+
+    /**
      * Get the server's WireGuard public key.
      *
      * @return string Public key in base64.
@@ -178,15 +205,11 @@ class MikrotikRestClient implements ClientInterface {
 
     /**
      * Get the WireGuard interface name from config.
-     * For REST client, we need to store it or pass it. Since it's not in constructor,
-     * we'll use a default or require it to be set.
      *
      * @return string
      */
     public function getInterface(): string
     {
-        // Default interface - in practice this would come from config
-        // For now, we'll return a default and override in WireGuardManager if needed
         return $this->interface ?? 'WireGuard-ResNovae';
     }
 
@@ -201,4 +224,62 @@ class MikrotikRestClient implements ClientInterface {
         $this->interface = $interface;
     }
 
+    /**
+     * Add a new WireGuard peer.
+     *
+     * @param array $payload Peer data (interface, public-key, allowed-address, name)
+     * @return array Created peer data including .id
+     * @throws Exception on failure.
+     */
+    public function addPeer(array $payload): array
+    {
+        return $this->request('PUT', '/interface/wireguard/peers', $payload);
+    }
+
+    /**
+     * Update an existing WireGuard peer.
+     *
+     * @param string $id Peer ID (e.g., *1c)
+     * @param array $payload Update data (name, public-key, etc.)
+     * @return void
+     * @throws Exception on failure.
+     */
+    public function updatePeer(string $id, array $payload): void
+    {
+        $this->request('PATCH', '/interface/wireguard/peers/' . $id, $payload);
+    }
+
+    /**
+     * Delete a WireGuard peer.
+     *
+     * @param string $id Peer ID (e.g., *1c)
+     * @return void
+     * @throws Exception on failure.
+     */
+    public function deletePeer(string $id): void
+    {
+        $this->request('DELETE', '/interface/wireguard/peers/' . $id);
+    }
+
+    /**
+     * Get PPP secrets (for SSTP/PPTP export).
+     *
+     * @return array List of PPP secrets
+     * @throws Exception on failure.
+     */
+    public function getPppSecrets(): array
+    {
+        return $this->request('GET', '/ppp/secret');
+    }
+
+    /**
+     * Get PPP active connections.
+     *
+     * @return array List of active PPP connections
+     * @throws Exception on failure.
+     */
+    public function getPppActive(): array
+    {
+        return $this->request('GET', '/ppp/active');
+    }
 }

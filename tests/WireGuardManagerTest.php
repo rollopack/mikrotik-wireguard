@@ -61,6 +61,10 @@ class MockMikrotikRestClient implements ClientInterface {
         return $filteredPeers;
     }
 
+    public function getAllPeers(): array {
+        return $this->request('GET', '/interface/wireguard/peers');
+    }
+
     public function getServerPublicKey(): string {
         $interfaces = $this->request('GET', '/interface/wireguard');
         foreach ($interfaces as $iface) {
@@ -73,6 +77,26 @@ class MockMikrotikRestClient implements ClientInterface {
 
     public function getInterface(): string {
         return 'WireGuard-ResNovae';
+    }
+
+    public function addPeer(array $payload): array {
+        return $this->request('PUT', '/interface/wireguard/peers', $payload);
+    }
+
+    public function updatePeer(string $id, array $payload): void {
+        $this->request('PATCH', '/interface/wireguard/peers/' . $id, $payload);
+    }
+
+    public function deletePeer(string $id): void {
+        $this->request('DELETE', '/interface/wireguard/peers/' . $id);
+    }
+
+    public function getPppSecrets(): array {
+        return $this->request('GET', '/ppp/secret');
+    }
+
+    public function getPppActive(): array {
+        return $this->request('GET', '/ppp/active');
     }
 }
 

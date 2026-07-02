@@ -1,138 +1,38 @@
 <?php
 
 require_once __DIR__ . '/ClientInterface.php';
-require_once __DIR__ . '/MikrotikRestClient.php';
 
 class MikrotikApiClient implements ClientInterface
 {
     private array $config;
     private string $mode;
-    private MikrotikRestClient $restClient;
     
     public function __construct(array $config, string $mode = 'native')
     {
         $this->config = $config;
         $this->mode = $mode;
-        $this->restClient = new MikrotikRestClient(
-            $config['host'],
-            $config['username'],
-            $config['password'],
-            $config['ssl_verify'] ?? false,
-            10,
-            $config['interface'] ?? 'WireGuard-ResNovae'
-        );
     }
     
     public function request(string $method, string $path, ?array $data = null): array
     {
-        return $this->restClient->request($method, $path, $data);
+        // For native mode, delegate to specific methods
+        // This is kept for backward compatibility with any code still using request()
+        throw new Exception("REST request() not supported in native mode. Use specific interface methods.");
     }
 
     public function getPeers(): array
     {
-        return $this->getPeersViaNativeApi();
+        return $this->getPeersViaNativeApi([]);
+    }
+    
+    public function getAllPeers(): array
+    {
+        return $this->queryNativeApi([], 'get_all_peers');
     }
     
     public function getServerPublicKey(): string
     {
-        $nativeConfig = $this->config['native_api'] ?? [];
-        
-        $input = [
-            'host' => $nativeConfig['host'] ?? $this->config['host'],
-            'port' => $nativeConfig['port'] ?? 8728,
-            'username' => $nativeConfig['username'] ?? $this->config['username'],
-            'password' => $nativeConfig['password'] ?? $this->config['password'],
-            'interface' => $this->getInterface(),
-            'tls' => $nativeConfig['tls'] ?? false,
-        ];
-        
-        $script = $nativeConfig['python_script'] ?? __DIR__ . '/get_peer_data.py';
-        
-        if (!is_file($script)) {
-            throw new Exception("Native API script not found: $script");
-        }
-        
-        $cmd = "python3 " . escapeshellarg($script);
-        
-        $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w'],
-        ];
-        
-        $proc = proc_open($cmd, $descriptors, $pipes);
-        
-        if (!is_resource($proc)) {
-            throw new Exception("Failed to start Python bridge process");
-        }
-        
-        stream_set_timeout($pipes[1], 10);
-        stream_set_timeout($pipes[2], 10);
-        
-        fwrite($pipes[0], json_encode($input));
-        fclose($pipes[0]);
-        
-        $stdout = '';
-        $stderr = '';
-        $startTime = time();
-        $timeout = 15;
-        
-        $write = null;
-        $except = null;
-        
-        while (!feof($pipes[1]) && (time() - $startTime) < $timeout) {
-            $read = [$pipes[1], $pipes[2]];
-            $ready = stream_select($read, $write, $except, 1);
-            
-            if ($ready === false) {
-                break;
-            }
-            
-            foreach ($read as $stream) {
-                if ($stream === $pipes[1]) {
-                    $stdout .= fread($pipes[1], 8192);
-                } elseif ($stream === $pipes[2]) {
-                    $stderr .= fread($pipes[2], 8192);
-                }
-            }
-            
-            $status = proc_get_status($proc);
-            if (!$status['running']) {
-                break;
-            }
-        }
-        
-        $status = proc_get_status($proc);
-        if ($status['running']) {
-            proc_terminate($proc, SIGKILL);
-            throw new Exception("Python bridge timed out");
-        }
-        
-        while (!feof($pipes[1])) {
-            $stdout .= fread($pipes[1], 8192);
-        }
-        while (!feof($pipes[2])) {
-            $stderr .= fread($pipes[2], 8192);
-        }
-        
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-        proc_close($proc);
-        
-        if (!empty($stderr)) {
-            error_log("Python bridge stderr: $stderr");
-        }
-        
-        $result = json_decode($stdout, true);
-        
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception("Python bridge returned invalid JSON: $stdout");
-        }
-        
-        if (isset($result['error'])) {
-            throw new Exception("Python bridge error: " . $result['error']);
-        }
-        
+        $result = $this->queryNativeApi([], 'get_interface');
         $ifaceName = $this->getInterface();
         if (isset($result[$ifaceName]) && isset($result[$ifaceName]['public-key'])) {
             return $result[$ifaceName]['public-key'];
@@ -153,9 +53,35 @@ class MikrotikApiClient implements ClientInterface
         return $this->config['interface'] ?? 'WireGuard-ResNovae';
     }
     
-    private function getPeersViaNativeApi(): array
+    public function addPeer(array $payload): array
     {
-        $nativeData = $this->queryNativeApi([]);
+        $result = $this->queryNativeApi([], 'add_peer', ['payload' => $payload]);
+        return $result;
+    }
+    
+    public function updatePeer(string $id, array $payload): void
+    {
+        $this->queryNativeApi([], 'update_peer', ['peer_id' => $id, 'update_data' => $payload]);
+    }
+    
+    public function deletePeer(string $id): void
+    {
+        $this->queryNativeApi([], 'delete_peer', ['peer_id' => $id]);
+    }
+    
+    public function getPppSecrets(): array
+    {
+        return $this->queryNativeApi([], 'get_ppp_secrets');
+    }
+    
+    public function getPppActive(): array
+    {
+        return $this->queryNativeApi([], 'get_ppp_active');
+    }
+    
+    private function getPeersViaNativeApi(array $peerNames = []): array
+    {
+        $nativeData = $this->queryNativeApi($peerNames);
         
         if (empty($nativeData)) {
             return [];
@@ -169,6 +95,7 @@ class MikrotikApiClient implements ClientInterface
             }
             
             $peer = [
+                '.id' => $data['.id'] ?? '',
                 'name' => $name,
                 'allowed-address' => $data['allowed-address'] ?? '',
                 'last-handshake' => $data['last-handshake'] ?? '',
@@ -188,9 +115,8 @@ class MikrotikApiClient implements ClientInterface
         return $filteredPeers;
     }
     
-    private function queryNativeApi(array $peerNames): array
+    private function queryNativeApi(array $peerNames = [], string $action = 'get_peers', array $extraData = []): array
     {
-        
         $nativeConfig = $this->config['native_api'] ?? [];
         
         $input = [
@@ -201,7 +127,13 @@ class MikrotikApiClient implements ClientInterface
             'peers' => array_values($peerNames),
             'interface' => $this->getInterface(),
             'tls' => $nativeConfig['tls'] ?? false,
+            'action' => $action,
         ];
+        
+        // Merge extra data (payload, peer_id, update_data, etc.)
+        foreach ($extraData as $key => $value) {
+            $input[$key] = $value;
+        }
         
         $script = $nativeConfig['python_script'] ?? __DIR__ . '/get_peer_data.py';
         
@@ -285,8 +217,21 @@ class MikrotikApiClient implements ClientInterface
         $returnCode = proc_close($proc);
         
         if ($returnCode !== 0) {
-            error_log("Python bridge failed (code $returnCode): $stderr");
-            return [];
+            // Try to parse error from stdout (where Python bridge outputs JSON errors)
+            $errorFromStdout = '';
+            $stdoutDecoded = json_decode($stdout, true);
+            if (json_last_error() === JSON_ERROR_NONE && isset($stdoutDecoded['error'])) {
+                $errorFromStdout = $stdoutDecoded['error'];
+            }
+            
+            $errorMsg = "Python bridge failed (code $returnCode)";
+            if (!empty($errorFromStdout)) {
+                $errorMsg .= ": $errorFromStdout";
+            } elseif (!empty($stderr)) {
+                $errorMsg .= ": $stderr";
+            }
+            error_log($errorMsg);
+            throw new Exception($errorMsg);
         }
         
         $result = json_decode($stdout, true);
@@ -298,7 +243,7 @@ class MikrotikApiClient implements ClientInterface
         
         if (isset($result['error'])) {
             error_log("Python bridge error: " . $result['error']);
-            return [];
+            throw new Exception("Python bridge error: " . $result['error']);
         }
         
         return $result;

@@ -8,10 +8,62 @@ class ConfigValidator {
         self::requireKey($config, 'endpoint');
         self::requireKey($config, 'client_allowed_ips');
 
+        // Validate native_api config if api_mode is native
+        $apiMode = $config['api_mode'] ?? 'rest';
+        if ($apiMode === 'native') {
+            self::validateNativeApiConfig($config);
+        }
+
         self::validateSubnet($config['subnet'], $config['server_ip']);
         self::validateEndpoint($config['endpoint']);
         self::validateClientAllowedIps($config['client_allowed_ips']);
         self::validateDnatFormula($config);
+    }
+
+    private static function validateNativeApiConfig(array $config): void {
+        if (!isset($config['native_api']) || !is_array($config['native_api'])) {
+            throw new InvalidArgumentException("native_api configuration required when api_mode is 'native'");
+        }
+
+        $nativeApi = $config['native_api'];
+
+        if (!isset($nativeApi['port']) || !is_int($nativeApi['port'])) {
+            throw new InvalidArgumentException("native_api.port must be an integer (8728 or 8729)");
+        }
+        if (!in_array($nativeApi['port'], [8728, 8729])) {
+            throw new InvalidArgumentException("native_api.port must be 8728 (plain) or 8729 (TLS)");
+        }
+
+        if (!isset($nativeApi['tls']) || !is_bool($nativeApi['tls'])) {
+            throw new InvalidArgumentException("native_api.tls must be a boolean");
+        }
+
+        // If TLS is enabled, port must be 8729
+        if ($nativeApi['tls'] && $nativeApi['port'] !== 8729) {
+            throw new InvalidArgumentException("When native_api.tls is true, native_api.port must be 8729");
+        }
+        // If TLS is disabled, port should be 8728
+        if (!$nativeApi['tls'] && $nativeApi['port'] !== 8728) {
+            throw new InvalidArgumentException("When native_api.tls is false, native_api.port should be 8728");
+        }
+
+        if (!isset($nativeApi['python_script']) || !is_string($nativeApi['python_script']) || $nativeApi['python_script'] === '') {
+            throw new InvalidArgumentException("native_api.python_script must be a non-empty string path to the Python bridge script");
+        }
+        if (!is_file($nativeApi['python_script'])) {
+            throw new InvalidArgumentException("native_api.python_script file not found: " . $nativeApi['python_script']);
+        }
+
+        // Validate optional host/username/password if provided (they can fall back to main config)
+        if (isset($nativeApi['host']) && !is_string($nativeApi['host'])) {
+            throw new InvalidArgumentException("native_api.host must be a string");
+        }
+        if (isset($nativeApi['username']) && !is_string($nativeApi['username'])) {
+            throw new InvalidArgumentException("native_api.username must be a string");
+        }
+        if (isset($nativeApi['password']) && !is_string($nativeApi['password'])) {
+            throw new InvalidArgumentException("native_api.password must be a string");
+        }
     }
 
     private static function requireKey(array $config, string $key): void {

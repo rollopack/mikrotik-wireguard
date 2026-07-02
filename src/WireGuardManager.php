@@ -174,7 +174,7 @@ class WireGuardManager {
     public function addPeer(string $name): array {
         // 1. Get ALL peers (unfiltered by interface) to avoid IP collisions
         //    with peers that may have lost their interface reference
-        $allPeers = $this->client->request('GET', '/interface/wireguard/peers');
+        $allPeers = $this->client->getAllPeers();
         $clientIp = $this->calculateNextFreeIp($allPeers);
 
         // 2. Generate client keys
@@ -191,7 +191,7 @@ class WireGuardManager {
             'name' => $name,
         ];
 
-        $this->client->request('PUT', '/interface/wireguard/peers', $payload);
+        $this->client->addPeer($payload);
 
         // 4b. Fetch the newly created peer's .id from the server
         $newPeerId = null;
@@ -247,7 +247,7 @@ class WireGuardManager {
         $payload = [
             'name' => $newName,
         ];
-        $this->client->request('PATCH', '/interface/wireguard/peers/' . $id, $payload);
+        $this->client->updatePeer($id, $payload);
     }
 
     /**
@@ -263,7 +263,7 @@ class WireGuardManager {
             'public-key' => $clientKeys['public_key'],
         ];
 
-        $this->client->request('PATCH', '/interface/wireguard/peers/' . $id, $payload);
+        $this->client->updatePeer($id, $payload);
 
         return $clientKeys;
     }
@@ -274,7 +274,7 @@ class WireGuardManager {
      * @param string $id MikroTik rest ID (e.g. *1c).
      */
     public function deletePeer(string $id): void {
-        $this->client->request('DELETE', '/interface/wireguard/peers/' . $id);
+        $this->client->deletePeer($id);
     }
 
     /**
