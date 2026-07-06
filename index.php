@@ -80,7 +80,7 @@ try {
         </div>
     <?php endif; ?>
 
-    <div class="container">
+    <main class="container">
         <!-- Header -->
         <header>
             <div class="brand">
@@ -97,7 +97,7 @@ try {
                         ? sprintf(t($lang, 'header.api_native'), $config['native_api']['port'] ?? 8728)
                         : t($lang, 'header.api_rest');
                     echo '<span class="api-mode-badge">' . t($lang, 'header.api_mode') . ' ' . $apiModeLabel . '</span>';
-                    echo '<a href="?logout" class="auth-badge" title="' . t($lang, 'auth.logout_btn') . '"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>' . t($lang, 'auth.logout_btn') . '</a>';
+                    echo '<nav aria-label="' . t($lang, 'auth.user_menu') . '"><a href="?logout" class="auth-badge" title="' . t($lang, 'auth.logout_btn') . '"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>' . t($lang, 'auth.logout_btn') . '</a></nav>';
                 ?>
             </div>
         </header>
@@ -116,7 +116,7 @@ try {
             </div>
             <div class="stat-card">
                 <span class="stat-title"><?php echo t($lang, 'stats.endpoint'); ?></span>
-                <span class="stat-value" style="font-size: 1.15rem; font-weight:600; padding: 0.45rem 0;"><?php echo htmlspecialchars($config['endpoint']); ?></span>
+                <span class="stat-value stat-value-compact"><?php echo htmlspecialchars($config['endpoint']); ?></span>
                 <span class="stat-desc"><?php echo t($lang, 'stats.endpoint_desc'); ?></span>
             </div>
             <div class="stat-card">
@@ -130,9 +130,9 @@ try {
         <div class="control-panel">
             <div class="search-box">
                 <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" /></svg>
-                <input type="text" id="searchInput" placeholder="<?php echo t($lang, 'search.placeholder'); ?>">
+                <input type="text" id="searchInput" placeholder="<?php echo t($lang, 'search.placeholder'); ?>" aria-label="<?php echo t($lang, 'search.placeholder'); ?>">
             </div>
-            <button class="btn btn-secondary btn-sm" id="hideOfflineBtn" onclick="toggleHideOffline()" title="<?php echo t($lang, 'search.hide_offline_title'); ?>" style="padding:0.5rem 0.85rem;font-size:0.85rem;">
+            <button class="btn btn-secondary btn-sm" id="hideOfflineBtn" onclick="toggleHideOffline()" title="<?php echo t($lang, 'search.hide_offline_title'); ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;margin-right:4px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
                 <span id="hideOfflineLabel"><?php echo t($lang, 'search.hide_offline'); ?></span>
             </button>
@@ -140,7 +140,7 @@ try {
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 <?php echo t($lang, 'search.add_peer'); ?>
             </button>
-            <button class="btn btn-secondary btn-sm" onclick="openExportVpnIpsModal()" title="<?php echo htmlspecialchars(t($lang, 'modal.export_vpn.title')); ?>" style="padding:0.5rem 0.85rem;font-size:0.85rem;">
+            <button class="btn btn-secondary btn-sm" onclick="openExportVpnIpsModal()" title="<?php echo htmlspecialchars(t($lang, 'modal.export_vpn.title')); ?>">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:18px;height:18px;margin-right:4px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                 <span><?php echo t($lang, 'modal.export_vpn.title'); ?></span>
             </button>
@@ -152,17 +152,17 @@ try {
                 <div class="spinner"></div>
             </div>
 
-            <table id="peersTable">
+            <table id="peersTable" aria-label="<?php echo t($lang, 'table.aria_label'); ?>">
                 <thead>
                     <tr>
-                        <th id="th-name" onclick="sortPeers('name')" style="cursor:pointer;">
-                            <?php echo t($lang, 'table.name'); ?> <span id="sort-name-icon" style="font-size:.75rem;margin-left:4px;">↕</span>
+                        <th id="th-name" class="th-sortable" onclick="sortPeers('name')" onkeydown="if(event.key==='Enter'||event.key===' ')sortPeers('name')" tabindex="0" role="button">
+                            <?php echo t($lang, 'table.name'); ?> <span id="sort-name-icon" class="sort-icon">↕</span>
                         </th>
-                        <th id="th-ip" onclick="sortPeers('ip')" style="cursor:pointer;">
-                            <?php echo t($lang, 'table.ip'); ?> <span id="sort-ip-icon" style="font-size:.75rem;margin-left:4px;">↕</span>
+                        <th id="th-ip" class="th-sortable" onclick="sortPeers('ip')" onkeydown="if(event.key==='Enter'||event.key===' ')sortPeers('ip')" tabindex="0" role="button">
+                            <?php echo t($lang, 'table.ip'); ?> <span id="sort-ip-icon" class="sort-icon">↕</span>
                         </th>
-                        <th id="th-handshake" onclick="sortPeers('handshake')" style="cursor:pointer;">
-                            <?php echo t($lang, 'table.handshake'); ?> <span id="sort-handshake-icon" style="font-size:.75rem;margin-left:4px;">↕</span>
+                        <th id="th-handshake" class="th-sortable" onclick="sortPeers('handshake')" onkeydown="if(event.key==='Enter'||event.key===' ')sortPeers('handshake')" tabindex="0" role="button">
+                            <?php echo t($lang, 'table.handshake'); ?> <span id="sort-handshake-icon" class="sort-icon">↕</span>
                         </th>
                         <th><?php echo t($lang, 'table.endpoint'); ?></th>
                         <th><?php echo t($lang, 'table.traffic'); ?></th>
@@ -180,14 +180,14 @@ try {
                 <p><?php echo t($lang, 'empty.description'); ?></p>
             </div>
         </div>
-    </div>
+    </main>
 
     <!-- Add Peer Modal -->
-    <div class="modal-backdrop" id="addModalBackdrop">
+    <div class="modal-backdrop" id="addModalBackdrop" aria-hidden="true">
         <div class="modal">
             <div class="modal-header">
-                <h3><?php echo t($lang, 'modal.add.title'); ?></h3>
-                <button class="close-btn" onclick="closeAddModal()">&times;</button>
+                <h2 class="modal-heading"><?php echo t($lang, 'modal.add.title'); ?></h2>
+                <button class="close-btn" onclick="closeAddModal()" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
             </div>
 
             <form id="addPeerForm" onsubmit="submitAddPeer(event)">
@@ -257,11 +257,11 @@ try {
     </div>
 
     <!-- Edit Name Modal -->
-    <div class="modal-backdrop" id="editModalBackdrop">
+    <div class="modal-backdrop" id="editModalBackdrop" aria-hidden="true">
         <div class="modal">
             <div class="modal-header">
-                <h3><?php echo t($lang, 'modal.edit.title'); ?></h3>
-                <button class="close-btn" onclick="closeEditModal()">&times;</button>
+                <h2 class="modal-heading"><?php echo t($lang, 'modal.edit.title'); ?></h2>
+                <button class="close-btn" onclick="closeEditModal()" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
             </div>
 
             <form id="editPeerForm" onsubmit="submitEditPeer(event)">
@@ -282,11 +282,11 @@ try {
     </div>
 
     <!-- Delete Confirm Modal -->
-    <div class="modal-backdrop" id="deleteModalBackdrop">
+    <div class="modal-backdrop" id="deleteModalBackdrop" aria-hidden="true">
         <div class="modal" style="max-width: 450px;">
             <div class="modal-header">
-                <h3 style="color: var(--danger);"><?php echo t($lang, 'modal.delete.title'); ?></h3>
-                <button class="close-btn" onclick="closeDeleteModal()">&times;</button>
+                <h2 class="modal-heading" style="color: var(--danger);"><?php echo t($lang, 'modal.delete.title'); ?></h2>
+                <button class="close-btn" onclick="closeDeleteModal()" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
             </div>
 
             <div class="modal-body">
@@ -303,16 +303,35 @@ try {
         </div>
     </div>
 
-    <!-- Export Config Modal -->
-    <div class="modal-backdrop" id="exportModalBackdrop">
-        <div class="modal">
+    <!-- Confirm Modal (generic) -->
+    <div class="modal-backdrop" id="confirmModalBackdrop" aria-hidden="true">
+        <div class="modal" style="max-width: 450px;">
             <div class="modal-header">
-                <h3><?php echo t($lang, 'modal.export.title'); ?></h3>
-                <button class="close-btn" onclick="closeExportModal()">&times;</button>
+                <h2 class="modal-heading" style="color: var(--warning);"><?php echo t($lang, 'modal.confirm.title'); ?></h2>
+                <button class="close-btn" onclick="closeConfirmModal()" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
             </div>
 
             <div class="modal-body">
-                <div class="form-row" style="display:flex; gap:1rem; margin-bottom:1rem;">
+                <p id="confirmModalText"></p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeConfirmModal()"><?php echo t($lang, 'modal.confirm.cancel'); ?></button>
+                <button type="button" class="btn btn-warning" id="btnConfirmAction"><?php echo t($lang, 'modal.confirm.submit'); ?></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Config Modal -->
+    <div class="modal-backdrop" id="exportModalBackdrop" aria-hidden="true">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-heading"><?php echo t($lang, 'modal.export.title'); ?></h2>
+                <button class="close-btn" onclick="closeExportModal()" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                    <div class="form-row-inline">
                     <div class="form-group" style="flex:1;">
                         <label><?php echo t($lang, 'modal.export.label_ip'); ?></label>
                         <div class="peer-ip-badge" id="exportIp" style="font-size: 1rem; padding: 0.35rem 0.75rem;">-</div>
@@ -372,11 +391,11 @@ try {
     </div>
 
     <!-- Export VPN IPs Modal -->
-    <div class="modal-backdrop" id="exportVpnIpsModalBackdrop">
+    <div class="modal-backdrop" id="exportVpnIpsModalBackdrop" aria-hidden="true">>
         <div class="modal" style="max-width:450px;">
             <div class="modal-header">
-                <h3><?php echo t($lang, 'modal.export_vpn.title'); ?></h3>
-                <button class="close-btn" onclick="closeExportVpnIpsModal()">&times;</button>
+                <h2 class="modal-heading"><?php echo t($lang, 'modal.export_vpn.title'); ?></h2>
+                <button class="close-btn" onclick="closeExportVpnIpsModal()" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
             </div>
             <div class="modal-body">
                 <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.25rem;">

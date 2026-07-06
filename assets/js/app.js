@@ -5,6 +5,11 @@
 
 'use strict';
 
+/* ── Constants ───────────────────────────────────────────────── */
+const ACTIVE_THRESHOLD = 300; // 5 min
+const TOAST_DURATION = 3000;
+const HIGHLIGHT_DURATION = 10000;
+
 /* ── i18n helper ─────────────────────────────────────────────── */
 function t(key) {
     return AppConfig.translations?.[key] || key;
@@ -94,7 +99,7 @@ function highlightPendingPeer() {
 /* ── Filter + Sort pipeline ─────────────────────────────────── */
 function isPeerActive(peer) {
     const handshake = peer['handshake_formatted'] || 'never';
-    return handshakeToSeconds(handshake) < 300; // 5 minuti
+    return handshakeToSeconds(handshake) < ACTIVE_THRESHOLD;
 }
 
 function applyFiltersAndSort() {
@@ -313,6 +318,50 @@ async function checkSession() {
     }
 }
 
+async function withSessionCheck(fn) {
+    if (!(await checkSession())) return;
+    fn();
+}
+
+/* ── Focus trap ──────────────────────────────────────────────── */
+function trapFocus(modalElement) {
+    const focusable = modalElement.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstFocusable = focusable[0];
+    const lastFocusable = focusable[focusable.length - 1];
+
+    function handleKeydown(e) {
+        if (e.key !== 'Tab') return;
+        if (e.shiftKey) {
+            if (document.activeElement === firstFocusable) {
+                e.preventDefault();
+                lastFocusable.focus();
+            }
+        } else {
+            if (document.activeElement === lastFocusable) {
+                e.preventDefault();
+                firstFocusable.focus();
+            }
+        }
+    }
+
+    modalElement.addEventListener('keydown', handleKeydown);
+    // Store reference for cleanup
+    modalElement._trapFocusHandler = handleKeydown;
+
+    // Focus first element
+    if (firstFocusable) firstFocusable.focus();
+}
+
+function releaseFocus(modalElement) {
+    const handler = modalElement._trapFocusHandler;
+    if (handler) {
+        modalElement.removeEventListener('keydown', handler);
+        delete modalElement._trapFocusHandler;
+    }
+}
+
 /* ── Add Peer Modal ─────────────────────────────────────────── */
 async function openAddModal() {
     if (!(await checkSession())) return;
@@ -322,7 +371,10 @@ async function openAddModal() {
     document.getElementById('modalResultContent').style.display = 'none';
     document.getElementById('modalFooterActions').style.display = 'flex';
     document.getElementById('peerName').value = '';
-    document.getElementById('addModalBackdrop').classList.add('active');
+    const backdrop = document.getElementById('addModalBackdrop');
+    backdrop.classList.add('active');
+    backdrop.setAttribute('aria-hidden', 'false');
+    trapFocus(backdrop);
     document.getElementById('peerName').focus();
     const submitBtn = document.getElementById('btnSubmitAdd');
     submitBtn.disabled = false;
@@ -330,7 +382,10 @@ async function openAddModal() {
 }
 
 function closeAddModal() {
-    document.getElementById('addModalBackdrop').classList.remove('active');
+    const backdrop = document.getElementById('addModalBackdrop');
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    releaseFocus(backdrop);
     loadPeers();
 }
 
@@ -406,7 +461,7 @@ function setupDownload(el, filename, content) {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         showToast(t('js.file_downloaded').replace('%s', filename));
-    });
+    }, { once: true });
 }
 
 /* ── Edit Peer Modal ────────────────────────────────────────── */
@@ -416,12 +471,18 @@ async function openEditModal(id, name) {
     highlightId = null;
     document.getElementById('editPeerId').value = id;
     document.getElementById('editPeerName').value = name;
-    document.getElementById('editModalBackdrop').classList.add('active');
+    const backdrop = document.getElementById('editModalBackdrop');
+    backdrop.classList.add('active');
+    backdrop.setAttribute('aria-hidden', 'false');
+    trapFocus(backdrop);
     document.getElementById('editPeerName').focus();
 }
 
 function closeEditModal() {
-    document.getElementById('editModalBackdrop').classList.remove('active');
+    const backdrop = document.getElementById('editModalBackdrop');
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    releaseFocus(backdrop);
 }
 
 async function submitEditPeer(event) {
@@ -458,12 +519,46 @@ async function openDeleteModal(id, name) {
     const clone = btn.cloneNode(true);
     btn.parentNode.replaceChild(clone, btn);
     clone.addEventListener('click', () => submitDeletePeer(peerToDeleteId));
-    document.getElementById('deleteModalBackdrop').classList.add('active');
+    const backdrop = document.getElementById('deleteModalBackdrop');
+    backdrop.classList.add('active');
+    backdrop.setAttribute('aria-hidden', 'false');
+    trapFocus(backdrop);
 }
 
 function closeDeleteModal() {
-    document.getElementById('deleteModalBackdrop').classList.remove('active');
+    const backdrop = document.getElementById('deleteModalBackdrop');
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    releaseFocus(backdrop);
     peerToDeleteId = null;
+}
+
+/* ── Confirm Modal ──────────────────────────────────────────── */
+let confirmCallback = null;
+
+function openConfirmModal(message, callback) {
+    const backdrop = document.getElementById('confirmModalBackdrop');
+    document.getElementById('confirmModalText').innerText = message;
+    confirmCallback = callback;
+    const btn = document.getElementById('btnConfirmAction');
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.addEventListener('click', () => {
+        const cb = confirmCallback;
+        closeConfirmModal();
+        if (typeof cb === 'function') cb();
+    });
+    backdrop.classList.add('active');
+    backdrop.setAttribute('aria-hidden', 'false');
+    trapFocus(backdrop);
+}
+
+function closeConfirmModal() {
+    const backdrop = document.getElementById('confirmModalBackdrop');
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    releaseFocus(backdrop);
+    confirmCallback = null;
 }
 
 async function submitDeletePeer(id) {
@@ -511,7 +606,10 @@ async function openExportModal(id, name, allowedAddress) {
         ${t('js.regenerate_btn')}`;
 
     switchExportTab('script');
-    document.getElementById('exportModalBackdrop').classList.add('active');
+    const backdrop = document.getElementById('exportModalBackdrop');
+    backdrop.classList.add('active');
+    backdrop.setAttribute('aria-hidden', 'false');
+    trapFocus(backdrop);
 }
 
 function updateExportConfig(privateKey) {
@@ -560,45 +658,47 @@ add address=${AppConfig.serverIp} list=MANAGEMENT`;
 }
 
 async function regenerateKey() {
-    if (!confirm(t('js.regenerate_confirm'))) {
-        return;
-    }
-    const btn = document.getElementById('btnRegenerateKey');
-    btn.disabled = true;
-    btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> ${t('js.regenerating')}`;
+    openConfirmModal(t('js.regenerate_confirm'), async () => {
+        const btn = document.getElementById('btnRegenerateKey');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> ${t('js.regenerating')}`;
 
-    try {
-        const res = await fetch('src/api.php?action=regenerate_key', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
-            body: JSON.stringify({ id: exportPeerId })
-        });
-        const data = await res.json();
-        if (data.success) {
-            updateExportConfig(data.private_key);
+        try {
+            const res = await fetch('src/api.php?action=regenerate_key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
+                body: JSON.stringify({ id: exportPeerId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                updateExportConfig(data.private_key);
 
-            // Show config section
-            document.getElementById('exportConfigSection').style.display = 'block';
-            switchExportTab('script');
+                // Show config section
+                document.getElementById('exportConfigSection').style.display = 'block';
+                switchExportTab('script');
 
-            showToast(t('js.key_regenerated'));
-            btn.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                ${t('js.config_updated')}`;
-        } else {
-            showToast(t('js.regenerate_error').replace('%s', data.error), true);
+                showToast(t('js.key_regenerated'));
+                btn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                    ${t('js.config_updated')}`;
+            } else {
+                showToast(t('js.regenerate_error').replace('%s', data.error), true);
+                btn.disabled = false;
+                btn.innerHTML = `${t('js.regenerate_btn')}`;
+            }
+        } catch {
+            showToast(t('js.api_error'), true);
             btn.disabled = false;
             btn.innerHTML = `${t('js.regenerate_btn')}`;
         }
-    } catch {
-        showToast(t('js.api_error'), true);
-        btn.disabled = false;
-        btn.innerHTML = `${t('js.regenerate_btn')}`;
-    }
+    });
 }
 
 function closeExportModal() {
-    document.getElementById('exportModalBackdrop').classList.remove('active');
+    const backdrop = document.getElementById('exportModalBackdrop');
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    releaseFocus(backdrop);
 }
 
 function switchExportTab(tab) {
@@ -639,10 +739,16 @@ async function openExportVpnIpsModal() {
     btn.disabled = false;
     btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;margin-right:4px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg> ${t('js.export_vpn_download')}`;
     document.getElementById('exportVpnIpsModalBackdrop').classList.add('active');
+    const backdrop = document.getElementById('exportVpnIpsModalBackdrop');
+    backdrop.setAttribute('aria-hidden', 'false');
+    trapFocus(backdrop);
 }
 
 function closeExportVpnIpsModal() {
-    document.getElementById('exportVpnIpsModalBackdrop').classList.remove('active');
+    const backdrop = document.getElementById('exportVpnIpsModalBackdrop');
+    backdrop.classList.remove('active');
+    backdrop.setAttribute('aria-hidden', 'true');
+    releaseFocus(backdrop);
 }
 
 async function submitExportVpnIps() {
@@ -702,7 +808,7 @@ function showToast(message, isError = false) {
     toast.style.borderLeftColor = color;
     toast.querySelector('svg').style.color = color;
     toast.classList.add('active');
-    setTimeout(() => toast.classList.remove('active'), 3000);
+    setTimeout(() => toast.classList.remove('active'), TOAST_DURATION);
 }
 
 /* ── Escape helpers ─────────────────────────────────────────── */

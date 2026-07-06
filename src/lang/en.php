@@ -35,7 +35,8 @@ return [
     'search.add_peer'        => 'Add New Peer',
 
     // ── Table ──────────────────────────────────────────────────
-    'table.name'             => 'Name',
+    'table.name'        => 'Name',
+    'table.aria_label'  => 'WireGuard peers list',
     'table.ip'               => 'Assigned IP',
     'table.handshake'        => 'Last Handshake',
     'table.endpoint'         => 'Endpoint',
@@ -57,6 +58,7 @@ return [
     'modal.add.tab_conf'         => 'Configuration (.conf)',
     'modal.add.tab_script'       => 'RouterOS Script (.rsc)',
     'modal.add.copy_title'       => 'Copy code',
+    'modal.close'                => 'Close',
     'modal.add.download_conf'    => 'Download .conf file',
     'modal.add.download_script'  => 'Download .rsc script',
     'modal.add.cancel'           => 'Cancel',
@@ -74,6 +76,10 @@ return [
     'modal.delete.description' => 'This action is irreversible and will remove the client\'s server access configuration.',
     'modal.delete.cancel'      => 'Cancel',
     'modal.delete.submit'      => 'Delete Now',
+
+    'modal.confirm.title'  => 'Confirm',
+    'modal.confirm.cancel' => 'Cancel',
+    'modal.confirm.submit' => 'Continue',
 
     // ── Export Modal ───────────────────────────────────────────
     'modal.export.title'           => 'Export Client Configuration',
@@ -118,6 +124,7 @@ return [
     'auth.too_many_attempts' => 'Too many login attempts. Please try again in 5 minutes.',
     'auth.setup_minlength'   => 'Password must be at least 8 characters.',
     'auth.setup_mismatch'    => 'Passwords do not match.',
+    'auth.user_menu'         => 'User menu',
     'auth.setup_prompt'      => 'Set admin password',
 
     // ── API error messages ─────────────────────────────────────

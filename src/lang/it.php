@@ -35,7 +35,8 @@ return [
     'search.add_peer'             => 'Aggiungi Nuovo Peer',
 
     // ── Table ──────────────────────────────────────────────────
-    'table.name'             => 'Nome',
+    'table.name'        => 'Nome',
+    'table.aria_label'  => 'Elenco peer WireGuard',
     'table.ip'               => 'IP Assegnato',
     'table.handshake'        => 'Ultimo Handshake',
     'table.endpoint'         => 'Endpoint',
@@ -57,6 +58,7 @@ return [
     'modal.add.tab_conf'         => 'Configurazione (.conf)',
     'modal.add.tab_script'       => 'Script RouterOS (.rsc)',
     'modal.add.copy_title'       => 'Copia codice',
+    'modal.close'                => 'Chiudi',
     'modal.add.download_conf'    => 'Scarica file .conf',
     'modal.add.download_script'  => 'Scarica script .rsc',
     'modal.add.cancel'           => 'Annulla',
@@ -74,6 +76,10 @@ return [
     'modal.delete.description' => 'Questa azione è irreversibile e rimuoverà la configurazione di accesso al server per il client.',
     'modal.delete.cancel'      => 'Annulla',
     'modal.delete.submit'      => 'Elimina Ora',
+
+    'modal.confirm.title'  => 'Conferma',
+    'modal.confirm.cancel' => 'Annulla',
+    'modal.confirm.submit' => 'Continua',
 
     // ── Export Modal ───────────────────────────────────────────
     'modal.export.title'           => 'Esporta Configurazione Client',
@@ -118,6 +124,7 @@ return [
     'auth.too_many_attempts' => 'Troppi tentativi di accesso. Riprova tra 5 minuti.',
     'auth.setup_minlength'   => 'La password deve essere di almeno 8 caratteri.',
     'auth.setup_mismatch'    => 'Le password non coincidono.',
+    'auth.user_menu'         => 'Menu utente',
     'auth.setup_prompt'      => 'Imposta password admin',
 
     // ── API error messages ─────────────────────────────────────
