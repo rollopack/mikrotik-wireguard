@@ -81,7 +81,7 @@ class authTest extends TestCase {
             session_destroy();
         }
         $_SESSION = [];
-        $result = login([], 'test_password_123');
+        $result = login('test_password_123');
         $this->assertTrue($result);
         $this->assertTrue($_SESSION['logged_in'] ?? false);
     }
@@ -92,7 +92,7 @@ class authTest extends TestCase {
             session_destroy();
         }
         $_SESSION = [];
-        $result = login([], 'wrong_password');
+        $result = login('wrong_password');
         $this->assertFalse($result);
     }
 
@@ -102,7 +102,7 @@ class authTest extends TestCase {
             session_destroy();
         }
         $_SESSION = [];
-        $result = login([], 'test_password_123');
+        $result = login('test_password_123');
         $this->assertFalse($result);
     }
 
@@ -112,7 +112,7 @@ class authTest extends TestCase {
             session_destroy();
         }
         $_SESSION = [];
-        $this->assertFalse(isLoggedIn([]));
+        $this->assertFalse(isLoggedIn());
     }
 
     public function testIsLoggedInWhenAuthDisabled(): void {
@@ -121,7 +121,7 @@ class authTest extends TestCase {
             session_destroy();
         }
         $_SESSION = ['logged_in' => true];
-        $this->assertFalse(isLoggedIn([]));
+        $this->assertFalse(isLoggedIn());
     }
 
     public function testIsLoggedInWhenLoggedIn(): void {
@@ -130,8 +130,8 @@ class authTest extends TestCase {
             session_destroy();
         }
         $_SESSION = [];
-        login([], 'test_password_123');
-        $this->assertTrue(isLoggedIn([]));
+        login('test_password_123');
+        $this->assertTrue(isLoggedIn());
     }
 
     public function testLogout(): void {
@@ -140,10 +140,50 @@ class authTest extends TestCase {
             session_destroy();
         }
         $_SESSION = [];
-        login([], 'test_password_123');
-        $this->assertTrue(isLoggedIn([]));
+        login('test_password_123');
+        $this->assertTrue(isLoggedIn());
         logout();
-        $this->assertFalse(isLoggedIn([]));
+        $this->assertFalse(isLoggedIn());
+    }
+
+    public function testBruteForceLockout(): void {
+        $this->createHashFile();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
+        $_SESSION = [];
+
+        $this->assertFalse(isBruteForceLocked(), 'Should not be locked initially');
+
+        // 5 failed attempts
+        for ($i = 0; $i < 5; $i++) {
+            login('wrong_password');
+        }
+
+        $this->assertTrue(isBruteForceLocked(), 'Should be locked after 5 failed attempts');
+        $this->assertFalse(login('test_password_123'), 'Correct password should fail when locked');
+        $this->assertEquals(5, $_SESSION['login_attempts']);
+
+        // Simulate lockout expiry
+        $_SESSION['last_login_attempt'] = time() - 301;
+        $this->assertFalse(isBruteForceLocked(), 'Should not be locked after timeout');
+    }
+
+    public function testBruteForceCounterResetOnSuccess(): void {
+        $this->createHashFile();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_destroy();
+        }
+        $_SESSION = [];
+
+        // 3 failed attempts, then success
+        login('wrong_password');
+        login('wrong_password');
+        login('wrong_password');
+        $this->assertEquals(3, $_SESSION['login_attempts']);
+
+        login('test_password_123');
+        $this->assertEquals(0, $_SESSION['login_attempts'], 'Counter should reset on successful login');
     }
 
     public function testGetCsrfTokenGeneratesToken(): void {

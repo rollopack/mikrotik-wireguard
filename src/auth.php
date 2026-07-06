@@ -3,6 +3,14 @@
 function startSession(): void
 {
     if (session_status() === PHP_SESSION_NONE) {
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'domain' => '',
+            'secure' => isset($_SERVER['HTTPS']),
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
         session_start();
     }
 }
@@ -22,7 +30,23 @@ function isAuthEnabled(): bool
     return getAdminHash() !== null;
 }
 
-function isLoggedIn(array $config): bool
+function isBruteForceLocked(): bool
+{
+    $attempts = $_SESSION['login_attempts'] ?? 0;
+    $lastAttempt = $_SESSION['last_login_attempt'] ?? 0;
+
+    if ($attempts >= 5 && (time() - $lastAttempt) < 300) {
+        return true;
+    }
+
+    if ($attempts >= 5 && (time() - $lastAttempt) >= 300) {
+        $_SESSION['login_attempts'] = 0;
+    }
+
+    return false;
+}
+
+function isLoggedIn(): bool
 {
     if (!isAuthEnabled()) {
         return false;
@@ -44,9 +68,9 @@ function isLoggedIn(array $config): bool
     return true;
 }
 
-function requireAuth(array $config): void
+function requireAuth(): void
 {
-    if (!isLoggedIn($config)) {
+    if (!isLoggedIn()) {
         if (strpos($_SERVER['SCRIPT_NAME'] ?? '', 'api.php') !== false) {
             header('Content-Type: application/json');
             http_response_code(401);
@@ -62,8 +86,12 @@ function requireAuth(array $config): void
     }
 }
 
-function login(array $config, string $password): bool
+function login(string $password): bool
 {
+    if (isBruteForceLocked()) {
+        return false;
+    }
+
     $hash = getAdminHash();
     if ($hash === null) {
         return false;
@@ -74,8 +102,13 @@ function login(array $config, string $password): bool
         session_regenerate_id(true);
         $_SESSION['logged_in'] = true;
         $_SESSION['last_activity'] = time();
+        $_SESSION['login_attempts'] = 0;
         return true;
     }
+
+    startSession();
+    $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
+    $_SESSION['last_login_attempt'] = time();
 
     return false;
 }
@@ -115,15 +148,14 @@ function logout(): void
     $_SESSION = [];
 
     if (ini_get('session.use_cookies')) {
-        $params = session_get_cookie_params();
         setcookie(
             session_name(),
             '',
             time() - 42000,
-            $params['path'],
-            $params['domain'],
-            $params['secure'],
-            $params['httponly']
+            '/',
+            '',
+            isset($_SERVER['HTTPS']),
+            true
         );
     }
 

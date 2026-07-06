@@ -157,6 +157,7 @@ Winbox connection: `CHR_IP:30024`
   - After setup, all pages (`index.php`, `api.php`) require login; unauthenticated API calls return `401 Unauthorized`
   - Session timeout: 30 minutes of inactivity
 - **display_errors disabled** in production — no PHP error leakage
+- **Brute-force protection** — login locked for 5 minutes after 5 failed attempts
 - **Intended for LAN use only** — do not expose to the Internet without additional security layers
 
 ## Project Structure
@@ -206,7 +207,7 @@ Winbox connection: `CHR_IP:30024`
 php tests/run_tests.php
 ```
 
-Uses a mock REST client — no real router needed. 97 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD, config validation, URL construction, authentication, and session management across 59 tests.
+Uses a mock REST client — no real router needed. 245 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD (incl. collision detection), config validation, URL construction, authentication, brute-force lockout, and session management across 119 tests.
 
 > **Disclaimer:** This software is provided "as is" without warranty of any kind. The author assumes no responsibility for any direct or indirect damages arising from its use. Use at your own risk.
 

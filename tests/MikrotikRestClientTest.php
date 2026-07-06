@@ -7,7 +7,6 @@ class MikrotikRestClientTest extends TestCase {
     private function readBaseUrl(MikrotikRestClient $client): string {
         $ref = new ReflectionClass($client);
         $prop = $ref->getProperty('baseUrl');
-        $prop->setAccessible(true);
         return $prop->getValue($client);
     }
 

@@ -202,6 +202,27 @@ class WireGuardManager {
                 break;
             }
         }
+        if ($newPeerId === null) {
+            foreach ($updatedPeers as $p) {
+                if (($p['name'] ?? '') === $name) {
+                    $newPeerId = $p['.id'] ?? null;
+                    break;
+                }
+            }
+        }
+
+        // 4c. Detect IP collision (race condition: two requests allocating same IP)
+        if ($newPeerId !== null) {
+            $peerIp = $clientIp . '/32';
+            foreach ($updatedPeers as $p) {
+                if (($p['.id'] ?? '') !== $newPeerId && ($p['allowed-address'] ?? '') === $peerIp) {
+                    $allPeers = $this->client->getAllPeers();
+                    $clientIp = $this->calculateNextFreeIp($allPeers);
+                    $this->client->updatePeer($newPeerId, ['allowed-address' => $clientIp . '/32']);
+                    break;
+                }
+            }
+        }
 
         // 5. Generate client config & client script
         $clientConfig = self::generateConfig(
@@ -299,6 +320,28 @@ Endpoint = $serverEndpoint
 AllowedIPs = $clientAllowedIps
 PersistentKeepalive = 25
 INI;
+    }
+
+    /**
+     * Extract unique IPv4 addresses from a list of peers' allowed-address fields.
+     *
+     * @param array $peers List of peers with 'allowed-address' field (comma-separated CIDRs)
+     * @return array Sorted unique IPv4 addresses
+     */
+    public static function extractUniqueIpv4Addresses(array $peers): array
+    {
+        $ips = [];
+        foreach ($peers as $peer) {
+            foreach (explode(',', $peer['allowed-address'] ?? '') as $cidr) {
+                $ip = explode('/', trim($cidr))[0];
+                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                    $ips[] = $ip;
+                }
+            }
+        }
+        $ips = array_unique($ips);
+        usort($ips, fn($a, $b) => strcmp(inet_pton($a), inet_pton($b)));
+        return $ips;
     }
 
     /**

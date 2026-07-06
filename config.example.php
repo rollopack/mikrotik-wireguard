@@ -19,7 +19,7 @@ return [
     'api_mode' => 'rest',
 
     // MikroTik CHR Connection Details (used by both REST and Native API)
-    'host' => 'https://192.168.88.1',    // Your MikroTik CHR IP or hostname
+    'host' => '192.168.88.1',    // Your MikroTik CHR IP or hostname
     'username' => 'admin',
     'password' => 'YOUR_ROUTER_PASSWORD', // REPLACE with your actual password
     'ssl_verify' => false,    // Set true if using a valid certificate

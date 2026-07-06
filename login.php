@@ -14,7 +14,7 @@ if (!isAuthEnabled()) {
     exit;
 }
 
-if (isLoggedIn($config)) {
+if (isLoggedIn()) {
     header('Location: index.php');
     exit;
 }
@@ -24,12 +24,17 @@ header('X-Frame-Options: DENY');
 
 $error = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $password = $_POST['password'] ?? '';
-    if (login($config, $password)) {
-        header('Location: index.php');
-        exit;
+    startSession();
+    if (isBruteForceLocked()) {
+        $error = t($lang, 'auth.too_many_attempts');
+    } else {
+        $password = $_POST['password'] ?? '';
+        if (login($password)) {
+            header('Location: index.php');
+            exit;
+        }
+        $error = t($lang, 'auth.invalid_password');
     }
-    $error = t($lang, 'auth.invalid_password');
 }
 ?><!DOCTYPE html>
 <html lang="<?php echo $config['lang'] ?? 'en'; ?>">

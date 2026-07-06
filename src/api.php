@@ -19,7 +19,7 @@ try {
     exit;
 }
 
-requireAuth($config);
+requireAuth();
 
 $lang = loadLanguage($config['lang'] ?? 'en');
 
@@ -105,24 +105,7 @@ try {
         $includeSstp = !empty($input['include_sstp']);
         $includePptp = !empty($input['include_pptp']);
 
-        $peers = $client->getPeers();
-        $wgIps = [];
-        foreach ($peers as $peer) {
-            if (!empty($peer['allowed-address'])) {
-                $parts = explode(',', $peer['allowed-address']);
-                foreach ($parts as $cidr) {
-                    $cidr = trim($cidr);
-                    $ip = explode('/', $cidr)[0];
-                    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                        $wgIps[] = $ip;
-                    }
-                }
-            }
-        }
-        $wgIps = array_unique($wgIps);
-        usort($wgIps, function ($a, $b) {
-            return strcmp(inet_pton($a), inet_pton($b));
-        });
+        $wgIps = WireGuardManager::extractUniqueIpv4Addresses($client->getPeers());
 
         $secretIpsSstp = [];
         $secretIpsPptp = [];

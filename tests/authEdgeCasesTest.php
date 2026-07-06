@@ -140,7 +140,7 @@ if ($phpLoggedIn) {
 }
 session_write_close();
 
-requireAuth([]);
+requireAuth();
 echo 'AUTH_OK';
 PHP;
 

@@ -179,7 +179,7 @@ class WireGuardManagerTest extends TestCase {
             '3.0.0.5',
             'client_private_key_base64_goes_here',
             'server_public_key_base64_goes_here',
-            'mailserver.resnovae.it:13231',
+            'vpn.example.com:13231',
             '3.0.0.0/24,192.168.111.0/24'
         );
 
@@ -188,7 +188,7 @@ class WireGuardManagerTest extends TestCase {
         $this->assertTrue(str_contains($config, 'Address = 3.0.0.5/32'), 'Config should contain address');
         $this->assertTrue(str_contains($config, '[Peer]'), 'Config should contain [Peer] section');
         $this->assertTrue(str_contains($config, 'PublicKey = server_public_key_base64_goes_here'), 'Config should contain server public key');
-        $this->assertTrue(str_contains($config, 'Endpoint = mailserver.resnovae.it:13231'), 'Config should contain endpoint');
+        $this->assertTrue(str_contains($config, 'Endpoint = vpn.example.com:13231'), 'Config should contain endpoint');
         $this->assertTrue(str_contains($config, 'AllowedIPs = 3.0.0.0/24,192.168.111.0/24'), 'Config should contain allowed IPs');
         $this->assertTrue(str_contains($config, 'PersistentKeepalive = 25'), 'Config should contain persistent keepalive');
     }
@@ -244,7 +244,7 @@ class WireGuardManagerTest extends TestCase {
             'interface' => 'WireGuard-ResNovae',
             'subnet' => '3.0.0.0/24',
             'server_ip' => '3.0.0.1',
-            'endpoint' => 'mailserver.resnovae.it:13231',
+            'endpoint' => 'vpn.example.com:13231',
             'client_allowed_ips' => '3.0.0.0/24,192.168.111.0/24'
         ]);
 
@@ -268,6 +268,59 @@ class WireGuardManagerTest extends TestCase {
         $this->assertEquals('Test-Client-New', $putRequest['data']['name']);
     }
 
+    public function testAddPeerWithCollision() {
+        $mockClient = new MockMikrotikRestClient();
+        // First getAllPeers call: existing peer at 3.0.0.5
+        $mockClient->setResponse('GET', '/interface/wireguard/peers', [
+            ['.id' => '*1a', 'interface' => 'WireGuard-ResNovae', 'public-key' => 'existing_key', 'allowed-address' => '3.0.0.5/32']
+        ]);
+        // getServerPublicKey response
+        $mockClient->setResponse('GET', '/interface/wireguard', [
+            ['name' => 'WireGuard-ResNovae', 'public-key' => 'SERVER_PUBLIC_KEY']
+        ]);
+        // addPeer response
+        $mockClient->setResponse('PUT', '/interface/wireguard/peers', ['.id' => '*1c']);
+        // getPeers for ID lookup: our peer (matched by name) + concurrent peer with SAME IP
+        $mockClient->setResponse('GET', '/interface/wireguard/peers', [
+            ['.id' => '*1a', 'interface' => 'WireGuard-ResNovae', 'public-key' => 'existing_key', 'allowed-address' => '3.0.0.5/32'],
+            ['.id' => '*1b', 'interface' => 'WireGuard-ResNovae', 'public-key' => 'concurrent_key', 'allowed-address' => '3.0.0.2/32'],
+            ['.id' => '*1c', 'interface' => 'WireGuard-ResNovae', 'public-key' => 'our_key', 'allowed-address' => '3.0.0.2/32', 'name' => 'Test-Client-Collision'],
+        ]);
+        // Second getAllPeers for re-allocation (still sees 3.0.0.2 as taken by concurrent)
+        $mockClient->setResponse('GET', '/interface/wireguard/peers', [
+            ['.id' => '*1a', 'interface' => 'WireGuard-ResNovae', 'public-key' => 'existing_key', 'allowed-address' => '3.0.0.5/32'],
+            ['.id' => '*1b', 'interface' => 'WireGuard-ResNovae', 'public-key' => 'concurrent_key', 'allowed-address' => '3.0.0.2/32'],
+            ['.id' => '*1c', 'interface' => 'WireGuard-ResNovae', 'public-key' => 'our_key', 'allowed-address' => '3.0.0.2/32', 'name' => 'Test-Client-Collision'],
+        ]);
+        // updatePeer response
+        $mockClient->setResponse('PATCH', '/interface/wireguard/peers/*1c', []);
+
+        $manager = new WireGuardManager($mockClient, [
+            'interface' => 'WireGuard-ResNovae',
+            'subnet' => '3.0.0.0/24',
+            'server_ip' => '3.0.0.1',
+            'endpoint' => 'vpn.example.com:13231',
+            'client_allowed_ips' => '3.0.0.0/24,192.168.111.0/24'
+        ]);
+
+        $result = $manager->addPeer('Test-Client-Collision');
+
+        $this->assertEquals('Test-Client-Collision', $result['name']);
+        $this->assertEquals('3.0.0.3', $result['ip'], 'Should re-allocate to next free IP after collision');
+
+        // Find PATCH request in client history
+        $patchRequest = null;
+        foreach ($mockClient->history as $req) {
+            if ($req['method'] === 'PATCH' && str_contains($req['path'], '/interface/wireguard/peers/')) {
+                $patchRequest = $req;
+                break;
+            }
+        }
+
+        $this->assertNotEmpty($patchRequest, 'A PATCH request should have been made to fix IP collision');
+        $this->assertEquals('3.0.0.3/32', $patchRequest['data']['allowed-address']);
+    }
+
     public function testRegenerateKey() {
         $mockClient = new MockMikrotikRestClient();
         $mockClient->setResponse('PATCH', '/interface/wireguard/peers/*1c', []);
@@ -276,7 +329,7 @@ class WireGuardManagerTest extends TestCase {
             'interface' => 'WireGuard-ResNovae',
             'subnet' => '3.0.0.0/24',
             'server_ip' => '3.0.0.1',
-            'endpoint' => 'mailserver.resnovae.it:13231',
+            'endpoint' => 'vpn.example.com:13231',
             'client_allowed_ips' => '3.0.0.0/24,192.168.111.0/24'
         ]);
 
@@ -349,4 +402,51 @@ class WireGuardManagerTest extends TestCase {
         $this->assertNotEmpty($deleteRequest, 'A DELETE request should have been made to delete peer');
     }
 
+    public function testExtractUniqueIpv4Addresses() {
+        // Empty list
+        $this->assertEquals([], WireGuardManager::extractUniqueIpv4Addresses([]));
+
+        // Single peer
+        $peers = [
+            ['allowed-address' => '3.0.0.2/32']
+        ];
+        $this->assertEquals(['3.0.0.2'], WireGuardManager::extractUniqueIpv4Addresses($peers));
+
+        // Multiple peers with unique IPs
+        $peers = [
+            ['allowed-address' => '3.0.0.2/32'],
+            ['allowed-address' => '3.0.0.5/32'],
+        ];
+        $this->assertEquals(['3.0.0.2', '3.0.0.5'], WireGuardManager::extractUniqueIpv4Addresses($peers));
+
+        // Duplicate IPs across peers
+        $peers = [
+            ['allowed-address' => '3.0.0.2/32'],
+            ['allowed-address' => '3.0.0.2/32'],
+        ];
+        $result = WireGuardManager::extractUniqueIpv4Addresses($peers);
+        $this->assertCount(1, $result);
+        $this->assertEquals(['3.0.0.2'], $result);
+
+        // Multiple CIDRs in single allowed-address
+        $peers = [
+            ['allowed-address' => '3.0.0.2/32,192.168.1.0/24'],
+        ];
+        $this->assertEquals(['3.0.0.2', '192.168.1.0'], WireGuardManager::extractUniqueIpv4Addresses($peers));
+
+        // Sorted order
+        $peers = [
+            ['allowed-address' => '10.0.0.1/32'],
+            ['allowed-address' => '3.0.0.5/32'],
+            ['allowed-address' => '192.168.1.1/32'],
+        ];
+        $this->assertEquals(['3.0.0.5', '10.0.0.1', '192.168.1.1'], WireGuardManager::extractUniqueIpv4Addresses($peers));
+
+        // Non-IPv4 addresses filtered out
+        $peers = [
+            ['allowed-address' => '::1/128'],
+            ['allowed-address' => '3.0.0.2/32'],
+        ];
+        $this->assertEquals(['3.0.0.2'], WireGuardManager::extractUniqueIpv4Addresses($peers));
+    }
 }
