@@ -118,6 +118,7 @@ def main():
                 Key('allowed-address'),
                 Key('interface'),
                 Key('public-key'),
+                Key('disabled'),
             ]
             iface_fields = [
                 Key('name'),
@@ -176,6 +177,7 @@ def main():
                                 'allowed-address': p.get('allowed-address', ''),
                                 'interface': p.get('interface', ''),
                                 'public-key': p.get('public-key', ''),
+                                'disabled': p.get('disabled', 'no'),
                             }
                 
                 # Also get WireGuard interface public key
@@ -206,6 +208,7 @@ def main():
                             'allowed-address': p.get('allowed-address', ''),
                             'interface': p.get('interface', ''),
                             'public-key': p.get('public-key', ''),
+                            'disabled': p.get('disabled', 'no'),
                         }
             
             elif action == 'get_interface':

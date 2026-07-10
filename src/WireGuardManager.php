@@ -299,6 +299,16 @@ class WireGuardManager {
     }
 
     /**
+     * Enable or disable a peer.
+     *
+     * @param string $id Peer ID (e.g. *1c).
+     * @param bool $disabled true to disable, false to enable.
+     */
+    public function togglePeer(string $id, bool $disabled): void {
+        $this->client->updatePeer($id, ['disabled' => $disabled ? 'yes' : 'no']);
+    }
+
+    /**
      * Generate standard wireguard .conf configuration content.
      */
     public static function generateConfig(

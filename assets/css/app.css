@@ -1024,3 +1024,36 @@ footer a:hover {
 tr.highlight-new {
     animation: highlight-pulse 4s ease-out;
 }
+
+/* ── Disabled Peer Row ───────────────────────────────────────── */
+tr.row-disabled {
+    opacity: 0.55;
+}
+
+tr.row-disabled .peer-name {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
+.badge-disabled {
+    display: inline-block;
+    font-size: .65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    padding: .05rem .45rem;
+    border-radius: 4px;
+    background: rgba(239, 68, 68, .15);
+    color: var(--danger);
+    margin-left: .5rem;
+    vertical-align: middle;
+    line-height: 1.4;
+    text-decoration: none;
+}
+
+/* ── Toggle Button ───────────────────────────────────────────── */
+.icon-btn-toggle-on:hover {
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, .4);
+    background: rgba(239, 68, 68, .1);
+}

@@ -234,10 +234,12 @@ function renderPeers(peers) {
 
         const tr = document.createElement('tr');
         tr.setAttribute('data-peer-ip', (peer['allowed-address'] || '').split('/')[0]);
+        if (peer.disabled) tr.classList.add('row-disabled');
         //console.log(peer);
         tr.innerHTML = `
             <td data-label="${t('js.col_name')}">
                 <span class="peer-name">${escapeHtml(peer.name || t('js.unnamed'))}</span>
+                ${peer.disabled ? `<span class="badge-disabled">${t('js.disabled_badge')}</span>` : ''}
             </td>
             <td data-label="${t('js.col_ip')}">
                 <span class="peer-ip-badge" style="cursor:pointer;" onclick="copyDnatPort('${escapeJs(peer['allowed-address'].split('/')[0])}')" title="${t('js.copy_port_title')}">${escapeHtml(peer['allowed-address'].split('/')[0])}</span>
@@ -270,6 +272,11 @@ function renderPeers(peers) {
                 <div class="actions-cell">
                     <button class="icon-btn" onclick="openExportModal('${escapeJs(peer['.id'])}','${escapeJs(peer.name)}','${escapeJs(peer['allowed-address'])}')" title="${t('js.download_title')}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                    </button>
+                    <button class="icon-btn ${peer.disabled ? '' : 'icon-btn-toggle-on'}" onclick="togglePeer('${peer['.id']}', ${peer.disabled})" title="${peer.disabled ? t('js.toggle_enable_title') : t('js.toggle_disable_title')}">
+                        ${peer.disabled
+                            ? '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/></svg>'
+                            : '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9A2.25 2.25 0 0 1 5.25 16.5v-9Z"/></svg>'}
                     </button>
                     <button class="icon-btn" onclick="openEditModal('${peer['.id']}','${escapeJs(peer.name)}')" title="${t('js.edit_title')}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>
@@ -578,6 +585,37 @@ async function submitDeletePeer(id) {
         }
     } catch {
         showToast(t('js.api_error'), true);
+    }
+}
+
+/* ── Toggle Peer (Enable/Disable) ──────────────────────────── */
+async function togglePeer(id, currentlyDisabled) {
+    if (!(await checkSession())) return;
+    const newDisabled = !currentlyDisabled;
+
+    const doToggle = async () => {
+        try {
+            const res = await fetch('src/api.php?action=toggle_peer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
+                body: JSON.stringify({ id, disabled: newDisabled })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(newDisabled ? t('js.peer_disabled') : t('js.peer_enabled'));
+                loadPeers();
+            } else {
+                showToast(t('js.toggle_error').replace('%s', data.error), true);
+            }
+        } catch {
+            showToast(t('js.api_error'), true);
+        }
+    };
+
+    if (newDisabled) {
+        openConfirmModal(t('js.toggle_disable_confirm'), doToggle);
+    } else {
+        doToggle();
     }
 }
 

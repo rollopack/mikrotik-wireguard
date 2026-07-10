@@ -89,6 +89,18 @@ try {
         exit;
     }
 
+    if ($_GET['action'] === 'toggle_peer') {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $id = trim($input['id'] ?? '');
+        if (empty($id)) {
+            throw new Exception(t($lang, 'api.id_required'));
+        }
+        $disabled = !empty($input['disabled']);
+        $manager->togglePeer($id, $disabled);
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     if ($_GET['action'] === 'delete_peer') {
         $input = json_decode(file_get_contents('php://input'), true);
         $id = trim($input['id'] ?? '');

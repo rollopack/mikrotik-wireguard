@@ -135,7 +135,7 @@ class MikrotikRestClient implements ClientInterface {
 
         // Only extract fields needed by the frontend to reduce payload size
         $allowedFields = ['.id', 'name', 'allowed-address', 'last-handshake',
-                          'current-endpoint-address', 'public-key'];
+                          'current-endpoint-address', 'public-key', 'disabled'];
 
         $filteredPeers = [];
         foreach ($peers as $peer) {
@@ -149,6 +149,8 @@ class MikrotikRestClient implements ClientInterface {
                     $out[$f] = $peer[$f];
                 }
             }
+            $raw = $peer['disabled'] ?? false;
+            $out['disabled'] = $raw === true || $raw === 'true' || $raw === 'yes';
             $out['rx_formatted'] = WireGuardManager::formatBytes($peer['rx'] ?? 0);
             $out['tx_formatted'] = WireGuardManager::formatBytes($peer['tx'] ?? 0);
             $out['handshake_formatted'] = WireGuardManager::formatHandshake($peer['last-handshake'] ?? '');

@@ -99,6 +99,7 @@ class MikrotikApiClient implements ClientInterface
                 'last-handshake' => $data['last-handshake'] ?? '',
                 'current-endpoint-address' => $data['current-endpoint-address'] ?? '',
                 'public-key' => $data['public-key'] ?? '',
+                'disabled' => (($raw = $data['disabled'] ?? 'no') === true || $raw === 'true' || $raw === 'yes'),
                 'rx' => $data['rx'] ?? '0',
                 'tx' => $data['tx'] ?? '0',
             ];

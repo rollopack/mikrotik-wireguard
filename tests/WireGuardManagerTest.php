@@ -37,7 +37,7 @@ class MockMikrotikRestClient implements ClientInterface {
         $interfaceFilter = 'WireGuard-ResNovae';
 
         $allowedFields = ['.id', 'name', 'allowed-address', 'last-handshake',
-                          'current-endpoint-address', 'public-key'];
+                          'current-endpoint-address', 'public-key', 'disabled'];
 
         $filteredPeers = [];
         foreach ($peers as $peer) {
@@ -400,6 +400,54 @@ class WireGuardManagerTest extends TestCase {
         }
 
         $this->assertNotEmpty($deleteRequest, 'A DELETE request should have been made to delete peer');
+    }
+
+    public function testTogglePeerDisable() {
+        $mockClient = new MockMikrotikRestClient();
+        $mockClient->setResponse('PATCH', '/interface/wireguard/peers/*1c', []);
+
+        $manager = new WireGuardManager($mockClient, [
+            'interface' => 'WireGuard-ResNovae',
+            'subnet' => '3.0.0.0/24',
+            'server_ip' => '3.0.0.1'
+        ]);
+
+        $manager->togglePeer('*1c', true);
+
+        $patchRequest = null;
+        foreach ($mockClient->history as $req) {
+            if ($req['method'] === 'PATCH' && $req['path'] === '/interface/wireguard/peers/*1c') {
+                $patchRequest = $req;
+                break;
+            }
+        }
+
+        $this->assertNotEmpty($patchRequest, 'A PATCH request should have been made to toggle peer');
+        $this->assertEquals('yes', $patchRequest['data']['disabled']);
+    }
+
+    public function testTogglePeerEnable() {
+        $mockClient = new MockMikrotikRestClient();
+        $mockClient->setResponse('PATCH', '/interface/wireguard/peers/*1c', []);
+
+        $manager = new WireGuardManager($mockClient, [
+            'interface' => 'WireGuard-ResNovae',
+            'subnet' => '3.0.0.0/24',
+            'server_ip' => '3.0.0.1'
+        ]);
+
+        $manager->togglePeer('*1c', false);
+
+        $patchRequest = null;
+        foreach ($mockClient->history as $req) {
+            if ($req['method'] === 'PATCH' && $req['path'] === '/interface/wireguard/peers/*1c') {
+                $patchRequest = $req;
+                break;
+            }
+        }
+
+        $this->assertNotEmpty($patchRequest, 'A PATCH request should have been made to toggle peer');
+        $this->assertEquals('no', $patchRequest['data']['disabled']);
     }
 
     public function testExtractUniqueIpv4Addresses() {
