@@ -98,6 +98,7 @@ function highlightPendingPeer() {
 
 /* ── Filter + Sort pipeline ─────────────────────────────────── */
 function isPeerActive(peer) {
+    if (peer.disabled) return false;
     const handshake = peer['handshake_formatted'] || 'never';
     return handshakeToSeconds(handshake) < ACTIVE_THRESHOLD;
 }
