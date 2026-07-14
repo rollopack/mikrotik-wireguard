@@ -239,7 +239,7 @@ function renderPeers(peers) {
         //console.log(peer);
         tr.innerHTML = `
             <td data-label="${t('js.col_name')}">
-                <span class="peer-name">${escapeHtml(peer.name || t('js.unnamed'))}</span>
+                <span class="peer-name" style="cursor:pointer;" onclick="copyNameToClipboard('${escapeJs(peer.name || t('js.unnamed'))}')" title="${t('js.copy_name_title')}">${escapeHtml(peer.name || t('js.unnamed'))}</span>
                 ${peer.disabled ? `<span class="badge-disabled">${t('js.disabled_badge')}</span>` : ''}
             </td>
             <td data-label="${t('js.col_ip')}">
@@ -758,6 +758,12 @@ function copyDnatPort(ip) {
     const dnatPort = AppConfig.dnatBase + parseInt(parts[2]) * AppConfig.dnatMultiplier + parseInt(parts[3]);
     navigator.clipboard.writeText(dnatPort.toString())
         .then(() => showToast(t('js.dnat_copied').replace('%d', dnatPort)))
+        .catch(() => showToast(t('js.copy_failed'), true));
+}
+
+function copyNameToClipboard(name) {
+    navigator.clipboard.writeText(name)
+        .then(() => showToast(t('js.name_copied')))
         .catch(() => showToast(t('js.copy_failed'), true));
 }
 

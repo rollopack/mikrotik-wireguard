@@ -186,6 +186,8 @@ return [
     'js.error_prefix'         => 'Errore: %s',
     'js.port_copied'          => 'Porta Winbox (DNAT): %d copiata!',
     'js.copy_failed'          => 'Impossibile copiare.',
+    'js.name_copied'          => 'Nome copiato negli appunti!',
+    'js.copy_name_title'      => 'Copia Nome',
     'js.code_copied'          => 'Codice copiato negli appunti!',
     'js.copy_auto_failed'     => 'Impossibile copiare il codice automaticamente.',
 ];
