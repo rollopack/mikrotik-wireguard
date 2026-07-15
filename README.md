@@ -2,7 +2,7 @@
 
 A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik RouterOS 7 CHR. Features automatic IP allocation, X25519 key generation, client configuration export, and full i18n support (Italian/English).
 
-![Dashboard Screenshot](screenshots/Dashboard-1.9.png)
+![Dashboard Screenshot](screenshots/Dashboard-1.9-1.png)
 ![Export Modal Screenshot](screenshots/Export.png)
 
 ## Features
