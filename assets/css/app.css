@@ -1037,18 +1037,70 @@ tr.row-disabled .peer-name {
 
 .badge-disabled {
     display: inline-block;
-    font-size: .65rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    padding: .05rem .45rem;
-    border-radius: 4px;
-    background: rgba(239, 68, 68, .15);
-    color: var(--danger);
     margin-left: .5rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(239, 68, 68, .3);
+    border-radius: 4px;
+    background: rgba(239, 68, 68, .12);
+    color: var(--danger);
     vertical-align: middle;
     line-height: 1.4;
-    text-decoration: none;
+}
+
+.badge-active {
+    display: inline-block;
+    margin-left: .5rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(34, 197, 94, .3);
+    border-radius: 4px;
+    background: rgba(34, 197, 94, .12);
+    color: var(--success);
+    vertical-align: middle;
+    line-height: 1.4;
+}
+
+/* ── Pagination ───────────────────────────────────────────────── */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .75rem;
+    padding: .85rem 1rem;
+    border-top: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, .01);
+}
+
+.pagination-btn {
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: .4rem .75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: var(--transition-smooth);
+    line-height: 1;
+}
+
+.pagination-btn:hover {
+    background: rgba(255, 255, 255, .1);
+    border-color: rgba(255, 255, 255, .2);
+}
+
+.pagination-btn:disabled {
+    opacity: .3;
+    cursor: not-allowed;
+}
+
+.pagination-info {
+    font-size: .85rem;
+    color: var(--text-muted);
+    white-space: nowrap;
 }
 
 /* ── Toggle Button ───────────────────────────────────────────── */

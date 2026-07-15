@@ -216,6 +216,31 @@ class MikrotikRestClient implements ClientInterface {
     }
 
     /**
+     * Get the status of the WireGuard interface.
+     *
+     * @return array{name: string, running: bool, disabled: bool, 'listen-port': int, mtu: int, 'public-key': string, comment: string}
+     * @throws Exception on failure.
+     */
+    public function getInterfaceStatus(): array
+    {
+        $interfaces = $this->request('GET', '/interface/wireguard');
+        foreach ($interfaces as $iface) {
+            if (($iface['name'] ?? '') === $this->getInterface()) {
+                return [
+                    'name' => $iface['name'] ?? '',
+                    'running' => ($iface['running'] ?? 'false') === 'true',
+                    'disabled' => ($iface['disabled'] ?? 'false') === 'true',
+                    'listen-port' => (int)($iface['listen-port'] ?? 0),
+                    'mtu' => (int)($iface['mtu'] ?? 0),
+                    'public-key' => $iface['public-key'] ?? '',
+                    'comment' => $iface['comment'] ?? '',
+                ];
+            }
+        }
+        throw new Exception("WireGuard interface '" . $this->getInterface() . "' not found on the MikroTik CHR.");
+    }
+
+    /**
      * Set the WireGuard interface name.
      *
      * @param string $interface

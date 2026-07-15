@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/WireGuardManager.php';
+
 class ConfigValidator {
     public static function validate(array $config): void {
         self::requireKey($config, 'subnet');
@@ -73,7 +75,7 @@ class ConfigValidator {
     }
 
     private static function validateSubnet(string $subnet, string $serverIp): void {
-        if (!preg_match('/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\/([0-9]+)$/', $subnet, $m)) {
+        if (!preg_match(WireGuardManager::SUBNET_REGEX, $subnet, $m)) {
             throw new InvalidArgumentException("Invalid subnet format: '$subnet'. Expected CIDR (e.g. 10.0.0.0/24)");
         }
 
@@ -141,7 +143,7 @@ class ConfigValidator {
 
         if (!isset($config['subnet'])) return;
 
-        if (!preg_match('/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\/([0-9]+)$/', $config['subnet'], $m)) return;
+        if (!preg_match(WireGuardManager::SUBNET_REGEX, $config['subnet'], $m)) return;
 
         $mask = (int)$m[2];
         

@@ -2,7 +2,7 @@
 
 A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik RouterOS 7 CHR. Features automatic IP allocation, X25519 key generation, client configuration export, and full i18n support (Italian/English).
 
-![Dashboard Screenshot](screenshots/Dashboard-1.4.png)
+![Dashboard Screenshot](screenshots/Dashboard-1.9.png)
 ![Export Modal Screenshot](screenshots/Export.png)
 
 ## Features
@@ -16,6 +16,9 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 - **Internationalization** — Italian and English UI, switchable via `config.php`
 - **VPN IPs Export** — Download all WireGuard peer IPs (and optionally SSTP secrets) as a text file via the dashboard
 - **Live Status** — Configurable auto-refresh (default 30s), real-time handshake/traffic monitoring
+- **Interface Status** — Shows whether the WireGuard interface is running/disabled in the header (green/red badge)
+- **Pagination** — Configurable page size (default 50), set to 0 to disable
+- **Configurable Handshake Timeout** — Offline threshold in minutes (default 5)
 - **Config Validation** — Startup validation with user-friendly error page for misconfiguration
 - **Consistent Error Handling** — All API layers throw exceptions with context
 
@@ -86,6 +89,8 @@ See `config.example.php` for all available options:
 | `endpoint` | Public endpoint for client connections (e.g. `vpn.example.com:13231`) |
 | `client_allowed_ips` | Allowed IPs in generated client configs |
 | `refresh_interval` | Dashboard auto-refresh interval in seconds (default: `30`) |
+| `handshake_timeout` | Minutes before a peer is shown as offline (default: `5`) |
+| `page_size` | Peers per page (default: `50`). Set to `0` to disable pagination |
 | `dnat_base` | Base port for the DNAT formula (default: `30000`) |
 | `dnat_multiplier` | Third octet multiplier in the DNAT formula (default: `1000`) |
 
@@ -207,7 +212,7 @@ Winbox connection: `CHR_IP:30024`
 php tests/run_tests.php
 ```
 
-Uses a mock REST client — no real router needed. 245 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD (incl. collision detection), config validation, URL construction, authentication, brute-force lockout, and session management across 119 tests.
+Uses a mock REST client — no real router needed. 262 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD (incl. collision detection), config validation, URL construction, authentication, brute-force lockout, session management, and interface status across 121 tests.
 
 > **Disclaimer:** This software is provided "as is" without warranty of any kind. The author assumes no responsibility for any direct or indirect damages arising from its use. Use at your own risk.
 

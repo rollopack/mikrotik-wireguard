@@ -98,6 +98,18 @@ class MockMikrotikRestClient implements ClientInterface {
     public function getPppActive(): array {
         return $this->request('GET', '/ppp/active');
     }
+
+    public function getInterfaceStatus(): array {
+        return [
+            'name' => 'WireGuard-ResNovae',
+            'running' => true,
+            'disabled' => false,
+            'listen-port' => 13231,
+            'mtu' => 1420,
+            'public-key' => '',
+            'comment' => '',
+        ];
+    }
 }
 
 class WireGuardManagerTest extends TestCase {

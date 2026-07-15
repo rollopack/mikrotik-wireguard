@@ -13,8 +13,6 @@ class MikrotikApiClient implements ClientInterface
     
     public function request(string $method, string $path, ?array $data = null): array
     {
-        // For native mode, delegate to specific methods
-        // This is kept for backward compatibility with any code still using request()
         throw new Exception("REST request() not supported in native mode. Use specific interface methods.");
     }
 
@@ -44,6 +42,25 @@ class MikrotikApiClient implements ClientInterface
         }
         
         throw new Exception("WireGuard interface '" . $ifaceName . "' not found or has no public key on the MikroTik CHR.");
+    }
+
+    public function getInterfaceStatus(): array
+    {
+        $result = $this->queryNativeApi([], 'get_interface');
+        $ifaceName = $this->getInterface();
+        if (isset($result[$ifaceName])) {
+            $iface = $result[$ifaceName];
+            return [
+                'name' => $iface['name'] ?? $ifaceName,
+                'running' => (($raw = $iface['running'] ?? 'false') === true || $raw === 'true' || $raw === 'yes'),
+                'disabled' => (($raw = $iface['disabled'] ?? 'false') === true || $raw === 'true' || $raw === 'yes'),
+                'listen-port' => (int)($iface['listen-port'] ?? 0),
+                'mtu' => (int)($iface['mtu'] ?? 0),
+                'public-key' => $iface['public-key'] ?? '',
+                'comment' => $iface['comment'] ?? '',
+            ];
+        }
+        throw new Exception("WireGuard interface '" . $ifaceName . "' not found on the MikroTik CHR.");
     }
     
     public function getInterface(): string
@@ -152,8 +169,9 @@ class MikrotikApiClient implements ClientInterface
         $proc = proc_open($cmd, $descriptors, $pipes);
         
         if (!is_resource($proc)) {
-            error_log("Failed to start Python bridge process");
-            return [];
+            $msg = "Failed to start Python bridge process";
+            error_log($msg);
+            throw new Exception($msg);
         }
         
         // Set timeout for the process (10 seconds)
@@ -202,11 +220,13 @@ class MikrotikApiClient implements ClientInterface
             error_log("Python bridge timed out after {$timeout}s, killed process");
         }
         
-        // Drain any remaining output
-        while (!feof($pipes[1])) {
+        // Drain any remaining output (with timeout guard)
+        $drainStart = time();
+        while (!feof($pipes[1]) && (time() - $drainStart) < 2) {
             $stdout .= fread($pipes[1], 8192);
         }
-        while (!feof($pipes[2])) {
+        $drainStart = time();
+        while (!feof($pipes[2]) && (time() - $drainStart) < 2) {
             $stderr .= fread($pipes[2], 8192);
         }
         
@@ -236,8 +256,9 @@ class MikrotikApiClient implements ClientInterface
         $result = json_decode($stdout, true);
         
         if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log("Python bridge returned invalid JSON: $stdout");
-            return [];
+            $msg = "Python bridge returned invalid JSON";
+            error_log("$msg: $stdout");
+            throw new Exception($msg);
         }
         
         if (isset($result['error'])) {

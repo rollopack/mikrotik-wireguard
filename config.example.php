@@ -56,4 +56,14 @@ return [
     // How often the peer list refreshes. Higher values reduce CHR load.
     // Default: 30
     'refresh_interval' => 30,
+
+    // Handshake Timeout (minutes)
+    // Peers with last handshake older than this are shown as offline.
+    // Default: 5
+    'handshake_timeout' => 5,
+
+    // Peers per page (pagination)
+    // Number of peers shown per page in the table. Default: 50
+    // Set to 0 to disable pagination (show all peers on one page).
+    'page_size' => 50,
 ];

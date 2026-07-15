@@ -51,8 +51,8 @@ try {
         // Test native API via Python bridge
         $client->getPeers();
     } else {
-        // Test REST API
-        $client->request('GET', '/interface/wireguard');
+        // Test REST API — use getPeers() which both modes implement
+        $client->getPeers();
     }
 } catch (Exception $e) {
     $connectionError = $e->getMessage();
@@ -90,7 +90,7 @@ try {
 
             <div class="status-badge">
                 <span class="status-dot <?php echo $connectionError !== null ? 'error' : 'active'; ?>"></span>
-                <span><?php echo t($lang, 'header.router_chr'); ?> <strong><?php echo htmlspecialchars($config['host']); ?></strong></span>
+                <span><?php echo t($lang, 'header.router_chr'); ?> <strong><?php echo htmlspecialchars($config['host']); ?></strong> <span id="wgInterfaceLabel" style="display:none;"></span></span>
                 <?php
                     $apiMode = $config['api_mode'] ?? 'rest';
                     $apiModeLabel = ($apiMode === 'native')
@@ -122,7 +122,7 @@ try {
             <div class="stat-card">
                 <span class="stat-title"><?php echo t($lang, 'stats.active_peers'); ?></span>
                 <span class="stat-value" id="stat-active-peers">-</span>
-                <span class="stat-desc"><?php echo t($lang, 'stats.active_peers_desc'); ?></span>
+                <span class="stat-desc"><?php echo sprintf(t($lang, 'stats.active_peers_desc'), $config['handshake_timeout'] ?? 5); ?></span>
             </div>
         </div>
 
@@ -178,6 +178,12 @@ try {
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.5 10.5a5.25 5.25 0 017 0M7.5 7.5a8.25 8.25 0 0113 0" /></svg>
                 <h3><?php echo t($lang, 'empty.title'); ?></h3>
                 <p><?php echo t($lang, 'empty.description'); ?></p>
+            </div>
+
+            <div class="pagination" id="pagination" style="display:none;">
+                <button class="pagination-btn" id="prevPageBtn" onclick="goToPage(currentPage - 1)">‹</button>
+                <span class="pagination-info" id="paginationInfo"></span>
+                <button class="pagination-btn" id="nextPageBtn" onclick="goToPage(currentPage + 1)">›</button>
             </div>
         </div>
     </main>
@@ -391,7 +397,7 @@ try {
     </div>
 
     <!-- Export VPN IPs Modal -->
-    <div class="modal-backdrop" id="exportVpnIpsModalBackdrop" aria-hidden="true">>
+    <div class="modal-backdrop" id="exportVpnIpsModalBackdrop" aria-hidden="true">
         <div class="modal" style="max-width:450px;">
             <div class="modal-header">
                 <h2 class="modal-heading"><?php echo t($lang, 'modal.export_vpn.title'); ?></h2>
@@ -449,6 +455,8 @@ try {
             dnatBase: <?php echo json_encode($config['dnat_base'] ?? 30000); ?>,
             dnatMultiplier: <?php echo json_encode($config['dnat_multiplier'] ?? 1000); ?>,
             refreshInterval: <?php echo json_encode(($config['refresh_interval'] ?? 30) * 1000); ?>,
+            handshakeTimeout: <?php echo json_encode(($config['handshake_timeout'] ?? 5) * 60); ?>,
+            pageSize: <?php echo json_encode($config['page_size'] ?? 50); ?>,
             translations: <?php echo json_encode(jsTranslations($lang), JSON_UNESCAPED_UNICODE); ?>,
             csrfToken: <?php echo json_encode(getCsrfToken()); ?>,
         };

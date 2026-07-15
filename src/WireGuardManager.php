@@ -3,6 +3,8 @@
 require_once __DIR__ . '/ClientInterface.php';
 
 class WireGuardManager {
+    const SUBNET_REGEX = '/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\/([0-9]+)$/';
+
     private ClientInterface $client;
     private array $config;
 
@@ -43,7 +45,7 @@ class WireGuardManager {
      * @throws Exception on invalid subnet format
      */
     public static function maxPeers(string $subnet, ?string $serverIp = null): int {
-        if (!preg_match('/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\/([0-9]+)$/', $subnet, $m)) {
+        if (!preg_match(self::SUBNET_REGEX, $subnet, $m)) {
             throw new Exception("Invalid subnet format: " . $subnet);
         }
         $size = 1 << (32 - (int)$m[2]);
@@ -115,7 +117,7 @@ class WireGuardManager {
     public function calculateNextFreeIp(array $peers): string {
         $subnet = $this->config['subnet'] ?? '3.0.0.0/21';
 
-        if (!preg_match('/^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\/([0-9]+)$/', $subnet, $matches)) {
+        if (!preg_match(self::SUBNET_REGEX, $subnet, $matches)) {
             throw new Exception("Invalid subnet format: " . $subnet);
         }
 
@@ -172,18 +174,13 @@ class WireGuardManager {
      * @throws Exception on API error or subnet full
      */
     public function addPeer(string $name): array {
-        // 1. Get ALL peers (unfiltered by interface) to avoid IP collisions
-        //    with peers that may have lost their interface reference
         $allPeers = $this->client->getAllPeers();
         $clientIp = $this->calculateNextFreeIp($allPeers);
 
-        // 2. Generate client keys
         $clientKeys = self::generateKeyPair();
 
-        // 3. Get server public key
         $serverPublicKey = $this->getServerPublicKey();
 
-        // 4. Create peer on MikroTik CHR
         $payload = [
             'interface' => $this->config['interface'],
             'public-key' => $clientKeys['public_key'],
@@ -191,40 +188,46 @@ class WireGuardManager {
             'name' => $name,
         ];
 
-        $this->client->addPeer($payload);
+        $result = $this->client->addPeer($payload);
+        $newPeerId = $result['.id'] ?? null;
 
-        // 4b. Fetch the newly created peer's .id from the server
-        $newPeerId = null;
-        $updatedPeers = $this->getPeers();
-        foreach ($updatedPeers as $p) {
-            if (($p['public-key'] ?? '') === $clientKeys['public_key']) {
-                $newPeerId = $p['.id'] ?? null;
-                break;
-            }
-        }
+        // Fallback: if addPeer didn't return .id, look it up
         if ($newPeerId === null) {
+            $updatedPeers = $this->getPeers();
             foreach ($updatedPeers as $p) {
-                if (($p['name'] ?? '') === $name) {
+                if (($p['public-key'] ?? '') === $clientKeys['public_key']) {
                     $newPeerId = $p['.id'] ?? null;
                     break;
                 }
             }
-        }
-
-        // 4c. Detect IP collision (race condition: two requests allocating same IP)
-        if ($newPeerId !== null) {
-            $peerIp = $clientIp . '/32';
-            foreach ($updatedPeers as $p) {
-                if (($p['.id'] ?? '') !== $newPeerId && ($p['allowed-address'] ?? '') === $peerIp) {
-                    $allPeers = $this->client->getAllPeers();
-                    $clientIp = $this->calculateNextFreeIp($allPeers);
-                    $this->client->updatePeer($newPeerId, ['allowed-address' => $clientIp . '/32']);
-                    break;
+            if ($newPeerId === null) {
+                foreach ($updatedPeers as $p) {
+                    if (($p['name'] ?? '') === $name) {
+                        $newPeerId = $p['.id'] ?? null;
+                        break;
+                    }
                 }
             }
         }
 
-        // 5. Generate client config & client script
+        // Retry loop for IP collision (TOCTOU race: another request may have claimed the same IP)
+        $peerIp = $clientIp . '/32';
+        $maxRetries = 3;
+        for ($retry = 0; $retry < $maxRetries; $retry++) {
+            $collision = false;
+            $allPeersNow = $this->client->getAllPeers();
+            foreach ($allPeersNow as $p) {
+                if ($newPeerId !== null && ($p['.id'] ?? '') !== $newPeerId && ($p['allowed-address'] ?? '') === $peerIp) {
+                    $collision = true;
+                    break;
+                }
+            }
+            if (!$collision) break;
+            $clientIp = $this->calculateNextFreeIp($allPeersNow);
+            $this->client->updatePeer($newPeerId, ['allowed-address' => $clientIp . '/32']);
+            $peerIp = $clientIp . '/32';
+        }
+
         $clientConfig = self::generateConfig(
             $clientIp,
             $clientKeys['private_key'],
@@ -322,7 +325,6 @@ class WireGuardManager {
 [Interface]
 PrivateKey = $clientPrivateKey
 Address = $clientIp/32
-DNS = 1.1.1.1
 
 [Peer]
 PublicKey = $serverPublicKey

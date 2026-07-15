@@ -123,6 +123,11 @@ def main():
             iface_fields = [
                 Key('name'),
                 Key('public-key'),
+                Key('running'),
+                Key('disabled'),
+                Key('listen-port'),
+                Key('mtu'),
+                Key('comment'),
             ]
             
             if action == 'get_peers':
@@ -212,7 +217,7 @@ def main():
                         }
             
             elif action == 'get_interface':
-                # Get interface public key
+                # Get interface status details
                 if not interface:
                     print(json.dumps({"error": "Interface name required for get_interface"}))
                     sys.exit(1)
@@ -223,7 +228,13 @@ def main():
                 if interfaces:
                     iface = interfaces[0]
                     result[interface] = {
+                        'name': iface.get('name', ''),
                         'public-key': iface.get('public-key', ''),
+                        'running': iface.get('running', 'false'),
+                        'disabled': iface.get('disabled', 'false'),
+                        'listen-port': iface.get('listen-port', '0'),
+                        'mtu': iface.get('mtu', '0'),
+                        'comment': iface.get('comment', ''),
                     }
                 else:
                     print(json.dumps({"error": f"Interface '{interface}' not found"}))

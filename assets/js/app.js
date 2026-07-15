@@ -6,9 +6,9 @@
 'use strict';
 
 /* ── Constants ───────────────────────────────────────────────── */
-const ACTIVE_THRESHOLD = 300; // 5 min
 const TOAST_DURATION = 3000;
 const HIGHLIGHT_DURATION = 10000;
+const PAGE_SIZE = (AppConfig.pageSize > 0) ? AppConfig.pageSize : 0;
 
 /* ── i18n helper ─────────────────────────────────────────────── */
 function t(key) {
@@ -23,6 +23,7 @@ let hideOffline = localStorage.getItem('hideOffline') !== 'false';
 let searchQuery = localStorage.getItem('searchQuery') || '';
 let highlightId = null;
 let pendingHighlightId = null;
+let currentPage = 1;
 
 
 /* ── Init ───────────────────────────────────────────────────── */
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('searchInput').value = searchQuery;
     loadPeers().then(() => updateSortIcons());
-    document.getElementById('searchInput').addEventListener('input', () => applyFiltersAndSort());
+    document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; applyFiltersAndSort(); });
 
     // Auto-refresh (pause when modals are open)
     setInterval(() => {
@@ -59,8 +60,10 @@ async function loadPeers() {
         if (data.success) {
             allPeers = data.peers;
             AppConfig.serverPublicKey = data.server_public_key || '';
+            currentPage = 1;
             applyFiltersAndSort();
             highlightPendingPeer();
+            fetchInterfaceStatus();
         } else {
             showToast(t('js.load_error').replace('%s', data.error), true);
         }
@@ -82,6 +85,7 @@ async function refreshPeers() {
             allPeers = data.peers;
             AppConfig.serverPublicKey = data.server_public_key || '';
             applyFiltersAndSort();
+            fetchInterfaceStatus();
             if (tableWrapper) tableWrapper.scrollTop = savedScroll;
         }
     } catch {
@@ -96,15 +100,40 @@ function highlightPendingPeer() {
     }
 }
 
+/* ── Interface Status ─────────────────────────────────────────── */
+async function fetchInterfaceStatus() {
+    try {
+        const res = await fetch('src/api.php?action=get_interface_status');
+        const data = await res.json();
+        if (data.success && data.interface) {
+            updateInterfaceStatusUI(data.interface);
+        }
+    } catch {
+        // silently ignore
+    }
+}
+
+function updateInterfaceStatusUI(iface) {
+    const label = document.getElementById('wgInterfaceLabel');
+    if (!label) return;
+
+    label.style.display = 'inline';
+    if (iface.running) {
+        label.innerHTML = `<span class="badge-active">${escapeHtml(iface.name)}</span>`;
+    } else {
+        label.innerHTML = `<span class="badge-disabled">${t('js.interface_disabled')}</span>`;
+    }
+}
+
 /* ── Filter + Sort pipeline ─────────────────────────────────── */
 function isPeerActive(peer) {
     if (peer.disabled) return false;
     const handshake = peer['handshake_formatted'] || 'never';
-    return handshakeToSeconds(handshake) < ACTIVE_THRESHOLD;
+    return handshakeToSeconds(handshake) < (AppConfig.handshakeTimeout ?? 300);
 }
 
 function applyFiltersAndSort() {
-    const peersCard = document.getElementById('stat-total-peers').closest('.stat-card');
+    const peersCard = document.getElementById('stat-total-peers')?.closest('.stat-card');
     const maxPeers = peersCard ? parseInt(peersCard.dataset.maxPeers) : null;
     document.getElementById('stat-total-peers').innerText = allPeers.length;
 
@@ -141,6 +170,7 @@ function toggleHideOffline() {
         btn.classList.remove('btn-active');
         label.innerText = t('js.hide_offline');
     }
+    currentPage = 1;
     applyFiltersAndSort();
 }
 
@@ -153,6 +183,7 @@ function sortPeers(field) {
         currentSort.dir = 'asc';
     }
     updateSortIcons();
+    currentPage = 1;
     applyFiltersAndSort();
 }
 
@@ -220,23 +251,29 @@ function renderPeers(peers) {
     if (peers.length === 0) {
         emptyState.style.display = 'flex';
         document.getElementById('stat-active-peers').innerText = '0';
+        document.getElementById('pagination').style.display = 'none';
         return;
     }
 
     emptyState.style.display = 'none';
-    let activeCount = 0;
 
-    peers.forEach(peer => {
+    const totalPages = PAGE_SIZE > 0 ? Math.ceil(peers.length / PAGE_SIZE) || 1 : 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    const pagePeers = PAGE_SIZE > 0 ? peers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE) : peers;
+
+    let activeCount = 0;
+    // Count active from full list for accurate stats
+    peers.forEach(p => { if (isPeerActive(p)) activeCount++; });
+
+    pagePeers.forEach(peer => {
         const handshake = peer['handshake_formatted'] || 'never';
         let isActive = isPeerActive(peer);
-        if (isActive) activeCount++;
 
         const endpoint = peer['current-endpoint-address'] || t('js.endpoint_na');
 
         const tr = document.createElement('tr');
         tr.setAttribute('data-peer-ip', (peer['allowed-address'] || '').split('/')[0]);
         if (peer.disabled) tr.classList.add('row-disabled');
-        //console.log(peer);
         tr.innerHTML = `
             <td data-label="${t('js.col_name')}">
                 <span class="peer-name" style="cursor:pointer;" onclick="copyNameToClipboard('${escapeJs(peer.name || t('js.unnamed'))}')" title="${t('js.copy_name_title')}">${escapeHtml(peer.name || t('js.unnamed'))}</span>
@@ -274,15 +311,15 @@ function renderPeers(peers) {
                     <button class="icon-btn" onclick="openExportModal('${escapeJs(peer['.id'])}','${escapeJs(peer.name)}','${escapeJs(peer['allowed-address'])}')" title="${t('js.download_title')}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
                     </button>
-                    <button class="icon-btn ${peer.disabled ? '' : 'icon-btn-toggle-on'}" onclick="togglePeer('${peer['.id']}', ${peer.disabled})" title="${peer.disabled ? t('js.toggle_enable_title') : t('js.toggle_disable_title')}">
+                    <button class="icon-btn ${peer.disabled ? '' : 'icon-btn-toggle-on'}" onclick="togglePeer('${escapeJs(peer['.id'])}', ${peer.disabled})" title="${peer.disabled ? t('js.toggle_enable_title') : t('js.toggle_disable_title')}">
                         ${peer.disabled
-                            ? '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/></svg>'
-                            : '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9A2.25 2.25 0 0 1 5.25 16.5v-9Z"/></svg>'}
+                ? '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9A2.25 2.25 0 0 1 5.25 16.5v-9Z"/></svg>'}
                     </button>
-                    <button class="icon-btn" onclick="openEditModal('${peer['.id']}','${escapeJs(peer.name)}')" title="${t('js.edit_title')}">
+                    <button class="icon-btn" onclick="openEditModal('${escapeJs(peer['.id'])}','${escapeJs(peer.name)}')" title="${t('js.edit_title')}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>
                     </button>
-                    <button class="icon-btn icon-btn-danger" onclick="openDeleteModal('${peer['.id']}','${escapeJs(peer.name)}')" title="${t('js.delete_title')}">
+                    <button class="icon-btn icon-btn-danger" onclick="openDeleteModal('${escapeJs(peer['.id'])}','${escapeJs(peer.name)}')" title="${t('js.delete_title')}">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
                     </button>
                 </div>
@@ -290,7 +327,6 @@ function renderPeers(peers) {
         tbody.appendChild(tr);
     });
 
-    // Highlight and scroll to a recently created/edited peer
     if (highlightId) {
         const targetRow = tbody.querySelector(`tr[data-peer-ip="${highlightId}"]`);
         if (targetRow) {
@@ -308,6 +344,29 @@ function renderPeers(peers) {
     }
 
     document.getElementById('stat-active-peers').innerText = activeCount;
+    renderPagination(currentPage, totalPages, peers.length);
+}
+
+function renderPagination(page, totalPages, totalPeers) {
+    const pagination = document.getElementById('pagination');
+    if (totalPages <= 1) {
+        pagination.style.display = 'none';
+        return;
+    }
+    pagination.style.display = 'flex';
+    document.getElementById('paginationInfo').innerText =
+        t('js.pagination_info').replace('%d', page).replace('%d', totalPages).replace('%d', totalPeers);
+    document.getElementById('prevPageBtn').disabled = page <= 1;
+    document.getElementById('nextPageBtn').disabled = page >= totalPages;
+}
+
+function goToPage(page) {
+    if (PAGE_SIZE <= 0) return;
+    const totalPages = Math.ceil(allPeers.length / PAGE_SIZE) || 1;
+    if (page < 1 || page > totalPages) return;
+    currentPage = page;
+    applyFiltersAndSort();
+    document.querySelector('.table-wrapper')?.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 /* ── Session check ───────────────────────────────────────────── */
@@ -663,7 +722,6 @@ function updateExportConfig(privateKey) {
     const confContent = `[Interface]
 PrivateKey = ${privateKey}
 Address = ${exportPeerIp}/${subnetMask}
-DNS = 1.1.1.1
 
 [Peer]
 PublicKey = ${serverPubKey}
@@ -864,5 +922,5 @@ function escapeHtml(str) {
 
 function escapeJs(str) {
     if (!str) return '';
-    return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+    return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/`/g, '\\`');
 }

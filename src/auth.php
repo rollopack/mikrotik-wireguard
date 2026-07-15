@@ -32,6 +32,7 @@ function isAuthEnabled(): bool
 
 function isBruteForceLocked(): bool
 {
+    startSession();
     $attempts = $_SESSION['login_attempts'] ?? 0;
     $lastAttempt = $_SESSION['last_login_attempt'] ?? 0;
 

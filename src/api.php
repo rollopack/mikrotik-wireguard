@@ -44,6 +44,14 @@ try {
         exit;
     }
 
+    if ($_GET['action'] === 'get_interface_status') {
+        echo json_encode([
+            'success' => true,
+            'interface' => $client->getInterfaceStatus(),
+        ]);
+        exit;
+    }
+
     if ($_GET['action'] === 'check_session') {
         echo json_encode(['success' => true]);
         exit;

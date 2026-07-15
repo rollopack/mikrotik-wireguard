@@ -25,7 +25,8 @@ return [
     'stats.endpoint'         => 'Endpoint Pubblico',
     'stats.endpoint_desc'    => 'Indirizzo per la connessione client',
     'stats.active_peers'     => 'Peer Attivi',
-    'stats.active_peers_desc'=> 'Handshake effettuato < 5 min',
+    'stats.active_peers_desc'=> 'Handshake effettuato entro %d min',
+
 
     // ── Search / Toolbar ───────────────────────────────────────
     'search.placeholder'          => 'Cerca peer per nome o indirizzo IP...',
@@ -122,6 +123,7 @@ return [
     'auth.setup_confirm'     => 'Conferma Password',
     'auth.setup_btn'         => 'Imposta Password',
     'auth.too_many_attempts' => 'Troppi tentativi di accesso. Riprova tra 5 minuti.',
+    'auth.setup_csrf_error'  => 'Token di sicurezza non valido. Riprova.',
     'auth.setup_minlength'   => 'La password deve essere di almeno 8 caratteri.',
     'auth.setup_mismatch'    => 'Le password non coincidono.',
     'auth.user_menu'         => 'Menu utente',
@@ -153,6 +155,10 @@ return [
     'js.peer_disabled'        => 'Peer disattivato con successo!',
     'js.peer_enabled'         => 'Peer attivato con successo!',
     'js.toggle_error'         => 'Errore durante l\'attivazione/disattivazione: %s',
+    'js.interface_running'    => 'Attiva',
+    'js.interface_stopped'    => 'Ferma',
+    'js.interface_disabled'   => 'Interfaccia disabilitata',
+
     'js.regenerate_btn'       => 'Rigenera Chiave & Scarica Config',
     'js.script_comment_header' => 'Incolla questo codice nel terminale del tuo MikroTik',
     'js.regenerate_error'     => 'Errore: %s',
@@ -184,6 +190,8 @@ return [
     'js.key_regenerated'      => 'Chiave rigenerata con successo!',
     'js.config_updated'       => 'Configurazione Aggiornata',
     'js.error_prefix'         => 'Errore: %s',
+    'js.pagination_info'      => 'Pagina %d di %d (%d totali)',
+
     'js.port_copied'          => 'Porta Winbox (DNAT): %d copiata!',
     'js.copy_failed'          => 'Impossibile copiare.',
     'js.name_copied'          => 'Nome copiato negli appunti!',

@@ -3,19 +3,6 @@
 interface ClientInterface
 {
     /**
-     * Send an HTTP request to the RouterOS REST API.
-     * Only used by REST implementation. Native implementation should use specific methods.
-     *
-     * @param string $method HTTP method (GET, POST, PATCH, PUT, DELETE)
-     * @param string $path API endpoint path (e.g., '/interface/wireguard/peers')
-     * @param array|null $data Payload data to send in the body.
-     * @return array Decoded JSON response.
-     * @throws Exception on connection failure or API error response.
-     * @deprecated Use specific methods instead (getPeers, addPeer, updatePeer, deletePeer, etc.)
-     */
-    public function request(string $method, string $path, ?array $data = null): array;
-
-    /**
      * Get all WireGuard peers with full data including last-handshake.
      * Filters by configured interface.
      *
@@ -75,6 +62,14 @@ interface ClientInterface
      * @throws Exception on failure.
      */
     public function deletePeer(string $id): void;
+
+    /**
+     * Get the status of the WireGuard interface (running, disabled, etc.).
+     *
+     * @return array{name: string, running: bool, disabled: bool, 'listen-port': int, mtu: int, 'public-key': string, comment: string}
+     * @throws Exception on failure.
+     */
+    public function getInterfaceStatus(): array;
 
     /**
      * Get PPP secrets (for SSTP/PPTP export).

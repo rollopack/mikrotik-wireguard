@@ -25,7 +25,8 @@ return [
     'stats.endpoint'         => 'Public Endpoint',
     'stats.endpoint_desc'    => 'Address for client connection',
     'stats.active_peers'     => 'Active Peers',
-    'stats.active_peers_desc'=> 'Handshake completed < 5 min',
+    'stats.active_peers_desc'=> 'Handshake completed within %d min',
+
 
     // ── Search / Toolbar ───────────────────────────────────────
     'search.placeholder'     => 'Search peer by name or IP address...',
@@ -122,6 +123,7 @@ return [
     'auth.setup_confirm'     => 'Confirm Password',
     'auth.setup_btn'         => 'Set Password',
     'auth.too_many_attempts' => 'Too many login attempts. Please try again in 5 minutes.',
+    'auth.setup_csrf_error'  => 'Invalid security token. Please try again.',
     'auth.setup_minlength'   => 'Password must be at least 8 characters.',
     'auth.setup_mismatch'    => 'Passwords do not match.',
     'auth.user_menu'         => 'User menu',
@@ -153,6 +155,10 @@ return [
     'js.peer_disabled'        => 'Peer disabled successfully!',
     'js.peer_enabled'         => 'Peer enabled successfully!',
     'js.toggle_error'         => 'Error toggling peer: %s',
+    'js.interface_running'    => 'Running',
+    'js.interface_stopped'    => 'Stopped',
+    'js.interface_disabled'   => 'Interface disabled',
+
     'js.regenerate_btn'       => 'Regenerate Key & Download Config',
     'js.script_comment_header' => 'Paste this code in your MikroTik terminal',
     'js.regenerate_error'     => 'Error: %s',
@@ -184,6 +190,8 @@ return [
     'js.key_regenerated'      => 'Key regenerated successfully!',
     'js.config_updated'       => 'Configuration Updated',
     'js.error_prefix'         => 'Error: %s',
+    'js.pagination_info'      => 'Page %d of %d (%d total)',
+
     'js.port_copied'          => 'Winbox Port (DNAT): %d copied!',
     'js.copy_failed'          => 'Unable to copy.',
     'js.name_copied'          => 'Name copied to clipboard!',

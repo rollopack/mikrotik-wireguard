@@ -18,19 +18,25 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 
 $error = null;
+$setupCsrfToken = bin2hex(random_bytes(32));
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $password = $_POST['password'] ?? '';
-    $confirm  = $_POST['confirm'] ?? '';
-
-    if (strlen($password) < 8) {
-        $error = t($lang, 'auth.setup_minlength');
-    } elseif ($password !== $confirm) {
-        $error = t($lang, 'auth.setup_mismatch');
+    $submittedToken = $_POST['_csrf_token'] ?? '';
+    if (!hash_equals($setupCsrfToken, $submittedToken)) {
+        $error = t($lang, 'auth.setup_csrf_error');
     } else {
-        $hash = password_hash($password, PASSWORD_BCRYPT);
-        file_put_contents(__DIR__ . '/.admin-hash', $hash);
-        header('Location: login.php');
-        exit;
+        $password = $_POST['password'] ?? '';
+        $confirm  = $_POST['confirm'] ?? '';
+
+        if (strlen($password) < 8) {
+            $error = t($lang, 'auth.setup_minlength');
+        } elseif ($password !== $confirm) {
+            $error = t($lang, 'auth.setup_mismatch');
+        } else {
+            $hash = password_hash($password, PASSWORD_BCRYPT);
+            file_put_contents(__DIR__ . '/.admin-hash', $hash);
+            header('Location: login.php');
+            exit;
+        }
     }
 }
 ?><!DOCTYPE html>
@@ -134,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="post">
+            <input type="hidden" name="_csrf_token" value="<?php echo $setupCsrfToken; ?>">
             <div class="form-group">
                 <label for="password"><?php echo t($lang, 'auth.setup_new_password'); ?></label>
                 <input type="password" id="password" name="password" required autofocus autocomplete="new-password">
