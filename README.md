@@ -220,4 +220,6 @@ Uses a mock REST client — no real router needed. 262 assertions covering key g
 
 ## License
 
-MIT
+GNU General Public License v3.0
+
+Copyright (C) 2026 Rolland Gabriel (https://github.com/rollopack)
