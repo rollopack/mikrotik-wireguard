@@ -52,6 +52,12 @@ return [
     'dnat_base' => 30000,
     'dnat_multiplier' => 1000,
 
+    // Default Export Format
+    // Which tab to activate and auto-copy after peer creation or key regeneration.
+    // 'conf' = WireGuard .conf format, 'rsc' = RouterOS .rsc script format.
+    // Default: 'rsc'
+    'export_mode' => 'rsc',
+
     // WireGuard Peer Comment
     // Used as a display name in the server selector dropdown.
     // If empty or omitted, falls back to the 'interface' value, then the filename.

@@ -385,7 +385,7 @@ try {
                 <div id="exportConfigSection" style="display:none;">
                     <div class="tab-buttons">
                         <button type="button" class="tab-btn" id="tabBtnExportConf" onclick="switchExportTab('conf')"><?php echo t($lang, 'modal.export.tab_conf'); ?></button>
-                        <button type="button" class="tab-btn active" id="tabBtnExportScript" onclick="switchExportTab('script')"><?php echo t($lang, 'modal.export.tab_script'); ?></button>
+                        <button type="button" class="tab-btn" id="tabBtnExportScript" onclick="switchExportTab('script')"><?php echo t($lang, 'modal.export.tab_script'); ?></button>
                     </div>
 
                     <div id="tab-export-conf" class="tab-content">
@@ -400,7 +400,7 @@ try {
                         </button>
                     </div>
 
-                    <div id="tab-export-script" class="tab-content active">
+                    <div id="tab-export-script" class="tab-content">
                         <div class="code-box">
                             <button type="button" class="copy-btn-code" onclick="copyToClipboard('code-export-script-text')" title="<?php echo t($lang, 'modal.add.copy_title'); ?>">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75A1.125 1.125 0 0 1 4.875 9.75H8.25m2.25 2.25h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75c0-.621.504-1.125 1.125-1.125Z" /></svg>
@@ -485,6 +485,7 @@ try {
             servers: <?php echo json_encode($availableServers); ?>,
             translations: <?php echo json_encode(jsTranslations($lang), JSON_UNESCAPED_UNICODE); ?>,
             csrfToken: <?php echo json_encode(getCsrfToken()); ?>,
+            exportMode: <?php echo json_encode($config['export_mode'] ?? 'rsc'); ?>,
         };
     </script>
     <script src="assets/js/app.js"></script>

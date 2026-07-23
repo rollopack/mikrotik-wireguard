@@ -66,6 +66,7 @@ See `configs/config.php.dist` for a template with all available options:
 | `page_size` | Peers per page (default: `50`). Set to `0` to disable pagination |
 | `dnat_base` | Base port for the DNAT formula (default: `30000`) |
 | `dnat_multiplier` | Third octet multiplier in the DNAT formula (default: `1000`) |
+| `export_mode` | Default export format after creation or key regeneration (`conf` or `rsc`). Default: `rsc` |
 
 The active server is resolved in this order:
 1. `?server=key` URL parameter
@@ -130,10 +131,9 @@ Winbox connection: `CHR_IP:30024`
 php tests/run_tests.php
 ```
 
-Uses a mock REST client — no real router needed. 295 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD (incl. collision detection), config validation, URL construction, authentication, brute-force lockout, session management, interface status, and multi-server config resolution across 133 tests.
+Uses a mock REST client — no real router needed. 296 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD (incl. collision detection), config validation, URL construction, authentication, brute-force lockout, session management, interface status, multi-server config resolution, and export mode validation across 133 tests.
 
 > **Disclaimer:** This software is provided "as is" without warranty of any kind. The author assumes no responsibility for any direct or indirect damages arising from its use. Use at your own risk.
-
 
 ## License
 

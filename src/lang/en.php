@@ -198,5 +198,6 @@ return [
     'js.name_copied'          => 'Name copied to clipboard!',
     'js.copy_name_title'      => 'Copy Name',
     'js.code_copied'          => 'Code copied to clipboard!',
+    'js.code_auto_copied'     => 'Config copied to clipboard!',
     'js.copy_auto_failed'     => 'Unable to copy code automatically.',
 ];

@@ -20,6 +20,7 @@ class ConfigValidator {
         self::validateEndpoint($config['endpoint']);
         self::validateClientAllowedIps($config['client_allowed_ips']);
         self::validateDnatFormula($config);
+        self::validateExportMode($config);
     }
 
     private static function validateNativeApiConfig(array $config): void {
@@ -165,6 +166,13 @@ class ConfigValidator {
                 "DNAT formula overflow: max port would be $maxPort > 65535. " .
                 "Reduce dnat_base ($base) or dnat_multiplier ($multiplier) for subnet {$config['subnet']}"
             );
+        }
+    }
+
+    private static function validateExportMode(array $config): void {
+        $mode = $config['export_mode'] ?? 'rsc';
+        if (!in_array($mode, ['conf', 'rsc'], true)) {
+            throw new InvalidArgumentException("export_mode must be 'conf' or 'rsc', got '$mode'");
         }
     }
 

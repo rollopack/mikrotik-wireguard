@@ -509,8 +509,12 @@ function displayAddResult(peer) {
     setupDownload(document.getElementById('btnDownloadConf'), `${peer.name}.conf`, peer.config);
     setupDownload(document.getElementById('btnDownloadScript'), `${peer.name}.rsc`, peer.script);
 
-    // Default to .rsc tab
-    switchAddTab('script');
+    const mode = AppConfig.exportMode === 'conf' ? 'conf' : 'script';
+    switchAddTab(mode);
+    const content = mode === 'conf' ? peer.config : peer.script;
+    navigator.clipboard.writeText(content)
+        .then(() => showToast(t('js.code_auto_copied')))
+        .catch(() => {});
 }
 
 function switchAddTab(tab) {
@@ -713,7 +717,7 @@ async function openExportModal(id, name, allowedAddress) {
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.688-5.57m-1.246-7.755v4.992m0 0h-4.992m4.993 0-3.183-3.183a8.25 8.25 0 0 0-13.688 5.57"/></svg>
         ${t('js.regenerate_btn')}`;
 
-    switchExportTab('script');
+    switchExportTab(AppConfig.exportMode === 'conf' ? 'conf' : 'script');
     const backdrop = document.getElementById('exportModalBackdrop');
     backdrop.classList.add('active');
     backdrop.setAttribute('aria-hidden', 'false');
@@ -762,6 +766,13 @@ add address=${AppConfig.serverIp} list=MANAGEMENT`;
 
     setupDownload(document.getElementById('btnDownloadExportConf'), `${exportPeerName}.conf`, confContent);
     setupDownload(document.getElementById('btnDownloadExportScript'), `${exportPeerName}.rsc`, scriptContent);
+
+    const mode = AppConfig.exportMode === 'conf' ? 'conf' : 'script';
+    switchExportTab(mode);
+    const content = mode === 'conf' ? confContent : scriptContent;
+    navigator.clipboard.writeText(content)
+        .then(() => showToast(t('js.code_auto_copied')))
+        .catch(() => {});
 }
 
 async function regenerateKey() {
@@ -782,7 +793,6 @@ async function regenerateKey() {
 
                 // Show config section
                 document.getElementById('exportConfigSection').style.display = 'block';
-                switchExportTab('script');
 
                 showToast(t('js.key_regenerated'));
                 btn.innerHTML = `

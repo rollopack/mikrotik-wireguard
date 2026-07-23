@@ -79,7 +79,7 @@ class ConfigManagerTest extends TestCase
         $_GET['server'] = 'dinomusa';
         $config = ConfigManager::resolveConfig();
         $this->assertEquals('dinomusa', $config['_server_key']);
-        $this->assertEquals('45.145.201.102', $config['host']);
+        $this->assertEquals('mailserver.dinomusa.it', $config['host']);
     }
 
     public function testResolveConfigWithResnovae(): void
@@ -114,7 +114,7 @@ class ConfigManagerTest extends TestCase
         $config = require __DIR__ . '/../configs/dinomusa.php';
         $this->assertEquals('native', $config['api_mode']);
         $this->assertEquals('10.200.200.10/24', $config['subnet']);
-        $this->assertEquals('45.145.201.102', $config['host']);
+        $this->assertEquals('mailserver.dinomusa.it', $config['host']);
         $this->assertEquals('wg-users', $config['interface']);
     }
 }

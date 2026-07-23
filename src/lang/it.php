@@ -198,5 +198,6 @@ return [
     'js.name_copied'          => 'Nome copiato negli appunti!',
     'js.copy_name_title'      => 'Copia Nome',
     'js.code_copied'          => 'Codice copiato negli appunti!',
+    'js.code_auto_copied'     => 'Configurazione copiata negli appunti!',
     'js.copy_auto_failed'     => 'Impossibile copiare il codice automaticamente.',
 ];
