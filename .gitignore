@@ -1,5 +1,6 @@
 # ── Sensitive Configuration ──────────────────────────────────
 config.php
+configs/*.php
 .htaccess
 .admin-hash
 .history/

@@ -2,58 +2,27 @@
 
 A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik RouterOS 7 CHR. Features automatic IP allocation, X25519 key generation, client configuration export, and full i18n support (Italian/English).
 
-![Dashboard Screenshot](screenshots/Dashboard-1.9-1.png)
+![Dashboard Screenshot](screenshots/Dashboard-2.0.0.png)
 ![Export Modal Screenshot](screenshots/Export.png)
 
 ## Features
 
-- **Web Dashboard** — List, create, edit, delete WireGuard peers via browser
-- **Automatic IP Allocation** — Scans subnet and assigns the next free IP
-- **X25519 Key Generation** — Uses `libsodium` for cryptographic key pairs
-- **Client Config Export** — Download `.conf` (WireGuard) or `.rsc` (RouterOS script)
-- **Key Regeneration** — Rotate keys without deleting/recreating peers
-- **Winbox DNAT Port** — Calculate and display the DNAT port for Winbox access to client routers through the CHR (`CHR_IP:DNAT_PORT`). Formula: `dnat_base + third_octet * dnat_multiplier + fourth_octet`, configurable via `config.php`.
-- **Internationalization** — Italian and English UI, switchable via `config.php`
-- **VPN IPs Export** — Download all WireGuard peer IPs (and optionally SSTP secrets) as a text file via the dashboard
-- **Live Status** — Configurable auto-refresh (default 30s), real-time handshake/traffic monitoring
-- **Interface Status** — Shows whether the WireGuard interface is running/disabled in the header (green/red badge)
-- **Pagination** — Configurable page size (default 50), set to 0 to disable
-- **Configurable Handshake Timeout** — Offline threshold in minutes (default 5)
-- **Config Validation** — Startup validation with user-friendly error page for misconfiguration
-- **Consistent Error Handling** — All API layers throw exceptions with context
+- **Web Dashboard** — CRUD WireGuard peers via browser
+- **Multi-Server** — Switch between MikroTik CHRs via header dropdown; separate configs per server
+- **Auto IP Allocation** — Scans subnet, assigns next free IP
+- **X25519 Key Gen** — `libsodium`-based key pairs with regeneration support
+- **Config Export** — Download `.conf` or `.rsc` per peer
+- **DNAT Port Display** — Winbox port calculated per peer (`dnat_base + octet3 × multiplier + octet4`)
+- **Live Status** — Auto-refresh (default 30s), handshake/traffic monitoring, interface online/offline badge
+- **Pagination** — Configurable page size (0 to disable)
+- **i18n** — Italian/English
+- **Startup Validation** — Misconfiguration shows a user-friendly error page
 
 ## Requirements
 
-### PHP
-
-| Component | Required | Notes |
-|-----------|----------|-------|
-| PHP | 8.0+ | |
-| `ext-sodium` | Yes | For X25519 key generation (`sodium_crypto_scalarmult_base`) |
-| `ext-json` | Yes | For JSON encoding/decoding |
-| `allow_url_fopen` | `On` | Required by `file_get_contents()` for REST API calls |
-
-### MikroTik RouterOS 7 CHR
-
-| Component | Required | Notes |
-|-----------|----------|-------|
-| RouterOS | 7.0+ | REST API requires RouterOS 7 |
-| REST API | Enabled for `rest` mode | `/ip/service/set www-ssl disabled=no port=443` |
-| Native API | Enabled for `native` mode | `/ip/service/set api disabled=no port=8728` |
-| Firewall | Open port 443 (rest) or 8728/8729 (native) | From the dashboard server to the CHR |
-| WireGuard | Interface created | e.g. `WireGuard-ResNovae` |
-| SSL Certificate | Self-signed OK | Set `ssl_verify: false` in config |
-
-### Web Server (Dashboard Host)
-
-| Component | Notes |
-|-----------|-------|
-| Apache / Nginx | Any with PHP-FPM |
-| PHP | 8.0+ with extensions above |
-| Python 3.8+ | Required for `native` API mode only |
-| `librouteros` | `pip install librouteros` — required for `native` mode only |
-| Network access | To CHR on port 443 (rest) or 8728/8729 (native) |
-| .htaccess support | For IP restriction (optional) |
+- **PHP 8.0+** with `ext-sodium`, `ext-json`, `allow_url_fopen=On`
+- **MikroTik RouterOS 7.0+** with REST API (port 443) or Native API (port 8728/8729) enabled
+- **Python 3.8+** + `librouteros` — only for `native` API mode
 
 ## Quick Start
 
@@ -61,29 +30,33 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 git clone https://github.com/rollopack/mikrotik-wireguard.git
 cd mikrotik-wireguard
 
-cp config.example.php config.php
-# Edit config.php with your MikroTik CHR credentials
+# Create your first server configuration
+cp configs/config.php.dist configs/myservername.php
+# Edit configs/myservername.php with your MikroTik CHR credentials
+# Repeat for additional servers — each gets its own file in configs/
 
 # Open setup.php in your browser
 # Set an admin password, then log in at login.php
-# Connection error banner appears if CHR is unreachable
+# Use the server dropdown in the header to switch between CHRs
 ```
 
 ## Configuration
 
-See `config.example.php` for all available options:
+Server configurations live in the `configs/` directory. Each `.php` file is a separate server. The server selector dropdown in the dashboard lets you switch between them.
+
+See `configs/config.php.dist` for a template with all available options:
 
 | Key | Description |
 |-----|-------------|
 | `lang` | UI language (`it` or `en`) |
 | `api_mode` | API mode: `rest` (default, port 443) or `native` (port 8728/8729) |
-| `host` | Router IP or hostname (e.g. `https://192.168.88.1`) |
+| `host` | Router IP or hostname |
 | `username` | Router username |
 | `password` | Router password |
 | `ssl_verify` | Verify SSL certificate (`false` for self-signed) |
 | `native_api` | Sub-array with `port`, `tls`, `python_script` for native mode |
 | `interface` | WireGuard interface name on the router |
-| `comment` | Comment set on peer connections (falls back to `interface` if empty) |
+| `comment` | Display name in the server selector (falls back to `interface`, then filename) |
 | `subnet` | WireGuard subnet in CIDR (e.g. `3.0.0.0/21`) |
 | `server_ip` | Server IP inside the subnet |
 | `endpoint` | Public endpoint for client connections (e.g. `vpn.example.com:13231`) |
@@ -94,35 +67,21 @@ See `config.example.php` for all available options:
 | `dnat_base` | Base port for the DNAT formula (default: `30000`) |
 | `dnat_multiplier` | Third octet multiplier in the DNAT formula (default: `1000`) |
 
+The active server is resolved in this order:
+1. `?server=key` URL parameter
+2. Session-stored preference (persisted after first selection)
+3. First available config file (alphabetically)
+
 ## API Modes
 
-The dashboard supports two API modes for connecting to the MikroTik CHR. Set `api_mode` in `config.php`:
+Set `api_mode` in the server's config file. Credentials fall back to the main config.
 
 | Mode | Description | Requirements |
 |------|-------------|--------------|
-| `rest` (default) | RouterOS REST API (HTTPS, port 443). Simple, no extra deps. | `allow_url_fopen=On`, PHP 8.0+ |
-| `native` | Full RouterOS Native API (port 8728/8729) via Python bridge. Alternative if REST is unavailable. Slower than REST due to Python bridge overhead. | Python 3.8+, `librouteros`, native API port 8728/8729 open |
+| `rest` (default) | RouterOS REST API via HTTPS (port 443). | `allow_url_fopen=On` |
+| `native` | Native API (port 8728/8729) via Python bridge. Alternative when REST is unavailable. | Python 3.8+, `librouteros` |
 
-### `native` mode
-
-```php
-// config.php
-'api_mode' => 'native',
-'native_api' => [
-    'type' => 'python',
-    'port' => 8728,                  // 8728 (plain) or 8729 (TLS)
-    'tls' => false,                  // true for port 8729 with TLS
-    'python_script' => __DIR__ . '/src/get_peer_data.py',
-],
-```
-
-Credentials (`host`/`username`/`password`) fall back to the main config, so you only need to override them in `native_api` if the native API uses different credentials.
-
-Requirements for `native`:
-- Python 3.8+ on the dashboard server
-- `pip install librouteros`
-- CHR firewall: allow dashboard server IP on port 8728 (or 8729 for TLS)
-- `/ip/service/set api disabled=no port=8728` on CHR (and `api-ssl` for TLS)
+See `configs/config.php.dist` for the `native_api` sub-array structure.
 
 ## DNAT Port Forwarding
 
@@ -142,7 +101,7 @@ The formula is:
 DNAT_PORT = dnat_base + third_octet * dnat_multiplier + fourth_octet
 ```
 
-Configure `dnat_base` and `dnat_multiplier` in `config.php` to fit your subnet (see [Configuration](#configuration)).
+Configure `dnat_base` and `dnat_multiplier` in your server's config file (under `configs/`) to fit your subnet (see [Configuration](#configuration)).
 
 **Example with defaults (`dnat_base=30000`, `dnat_multiplier=1000`):**  
 Peer IP `3.0.0.24` → port `30000 + 0 * 1000 + 24 = **30024**`  
@@ -151,7 +110,7 @@ Winbox connection: `CHR_IP:30024`
 
 ## Security
 
-- **`config.php` is gitignored** — router credentials stay local
+- **`config.php` and `configs/*.php` are gitignored** — router credentials stay local
 - **Private keys are never stored** on the server after the modal is closed
 - **IP restriction via `.htaccess`** — see `.htaccess.example` for setup instructions
 - **Dashboard authentication** — PHP session login, mandatory. To set it up:
@@ -165,58 +124,16 @@ Winbox connection: `CHR_IP:30024`
 - **Brute-force protection** — login locked for 5 minutes after 5 failed attempts
 - **Intended for LAN use only** — do not expose to the Internet without additional security layers
 
-## Project Structure
-
-```
-├── .gitignore                # Ignores config.php, temp/, etc.
-├── .htaccess.example         # IP restriction template (comments)
-├── config.php               # Router credentials (gitignored)
-├── config.example.php       # Configuration template
-├── login.php                # Login page
-├── setup.php                # First-run password setup
-├── index.php                # Dashboard UI
-├── screenshots/
-│   ├── Dashboard-1.4.png
-│   └── Export.png
-├── assets/
-│   ├── css/
-│   │   └── app.css
-│   └── js/
-│       └── app.js
-├── src/
-│   ├── api.php                      # AJAX API endpoints
-│   ├── auth.php                     # Session authentication logic
-│   ├── ClientInterface.php          # Common interface for REST/Native clients
-│   ├── ClientFactory.php            # Factory — creates the correct client by api_mode
-│   ├── MikrotikRestClient.php       # REST API client (file_get_contents), implements ClientInterface
-│   ├── MikrotikApiClient.php        # Native API client (Python bridge), implements ClientInterface
-│   ├── get_peer_data.py             # Python bridge: queries RouterOS native API via librouteros
-│   ├── WireGuardManager.php         # Business logic
-│   ├── ConfigValidator.php          # Configuration validation
-│   ├── export-vpn-ips.php           # CLI script: exports peer/SSTP IPs to file
-│   ├── i18n.php                     # Translation helpers
-│   └── lang/
-│       ├── it.php                   # Italian strings
-│       └── en.php                   # English strings
-└── tests/
-    ├── run_tests.php
-    ├── WireGuardManagerTest.php
-    ├── ConfigValidatorTest.php
-    ├── MikrotikRestClientTest.php
-    └── authTest.php
-```
-
 ## Testing
 
 ```bash
 php tests/run_tests.php
 ```
 
-Uses a mock REST client — no real router needed. 262 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD (incl. collision detection), config validation, URL construction, authentication, brute-force lockout, session management, and interface status across 121 tests.
+Uses a mock REST client — no real router needed. 295 assertions covering key generation, IP allocation, config formatting, API interaction, peer CRUD (incl. collision detection), config validation, URL construction, authentication, brute-force lockout, session management, interface status, and multi-server config resolution across 133 tests.
 
 > **Disclaimer:** This software is provided "as is" without warranty of any kind. The author assumes no responsibility for any direct or indirect damages arising from its use. Use at your own risk.
 
-> **Warning:** This tool is designed for use on **trusted local networks**. If exposed to the Internet, additional security measures such as HTTP authentication, firewall, SSL reverse proxy, rate limiting, and access monitoring must be implemented. This script does not provide built-in protection against external attacks.
 
 ## License
 

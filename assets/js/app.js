@@ -15,6 +15,16 @@ function t(key) {
     return AppConfig.translations?.[key] || key;
 }
 
+/* ── API URL helper ──────────────────────────────────────────── */
+function apiUrl(action) {
+    return 'src/api.php?action=' + encodeURIComponent(action) + '&server=' + encodeURIComponent(AppConfig.serverKey);
+}
+
+/* ── Server switch ───────────────────────────────────────────── */
+function switchServer(serverKey) {
+    window.location.href = '?server=' + encodeURIComponent(serverKey);
+}
+
 /* ── State ──────────────────────────────────────────────────── */
 let allPeers = [];
 let peerToDeleteId = null;
@@ -55,7 +65,7 @@ async function loadPeers() {
     const loader = document.getElementById('tableLoader');
     loader.classList.add('active');
     try {
-        const res = await fetch('src/api.php?action=get_peers');
+        const res = await fetch(apiUrl('get_peers'));
         const data = await res.json();
         if (data.success) {
             allPeers = data.peers;
@@ -79,7 +89,7 @@ async function refreshPeers() {
     const tableWrapper = document.querySelector('.table-wrapper');
     const savedScroll = tableWrapper?.scrollTop || 0;
     try {
-        const res = await fetch('src/api.php?action=get_peers');
+        const res = await fetch(apiUrl('get_peers'));
         const data = await res.json();
         if (data.success) {
             allPeers = data.peers;
@@ -103,7 +113,7 @@ function highlightPendingPeer() {
 /* ── Interface Status ─────────────────────────────────────────── */
 async function fetchInterfaceStatus() {
     try {
-        const res = await fetch('src/api.php?action=get_interface_status');
+        const res = await fetch(apiUrl('get_interface_status'));
         const data = await res.json();
         if (data.success && data.interface) {
             updateInterfaceStatusUI(data.interface);
@@ -372,7 +382,7 @@ function goToPage(page) {
 /* ── Session check ───────────────────────────────────────────── */
 async function checkSession() {
     try {
-        const res = await fetch('src/api.php?action=check_session');
+        const res = await fetch(apiUrl('check_session'));
         const data = await res.json();
         if (!data.success) {
             window.location.href = 'login.php';
@@ -465,7 +475,7 @@ async function submitAddPeer(event) {
     submitBtn.disabled = true;
 
     try {
-        const res = await fetch('src/api.php?action=add_peer', {
+        const res = await fetch(apiUrl('add_peer'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
             body: JSON.stringify({ name: nameInput.value })
@@ -557,7 +567,7 @@ async function submitEditPeer(event) {
     const id = document.getElementById('editPeerId').value;
     const name = document.getElementById('editPeerName').value;
     try {
-        const res = await fetch('src/api.php?action=update_peer', {
+        const res = await fetch(apiUrl('update_peer'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
             body: JSON.stringify({ id, name })
@@ -630,7 +640,7 @@ function closeConfirmModal() {
 
 async function submitDeletePeer(id) {
     try {
-        const res = await fetch('src/api.php?action=delete_peer', {
+        const res = await fetch(apiUrl('delete_peer'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
             body: JSON.stringify({ id })
@@ -655,7 +665,7 @@ async function togglePeer(id, currentlyDisabled) {
 
     const doToggle = async () => {
         try {
-            const res = await fetch('src/api.php?action=toggle_peer', {
+            const res = await fetch(apiUrl('toggle_peer'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
                 body: JSON.stringify({ id, disabled: newDisabled })
@@ -761,7 +771,7 @@ async function regenerateKey() {
         btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> ${t('js.regenerating')}`;
 
         try {
-            const res = await fetch('src/api.php?action=regenerate_key', {
+            const res = await fetch(apiUrl('regenerate_key'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
                 body: JSON.stringify({ id: exportPeerId })
@@ -860,7 +870,7 @@ async function submitExportVpnIps() {
     btn.innerHTML = `<span class="spinner" style="width:16px;height:16px;border-width:2px;"></span> ${t('js.exporting')}`;
 
     try {
-        const res = await fetch('src/api.php?action=export_vpn_ips', {
+        const res = await fetch(apiUrl('export_vpn_ips'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': AppConfig.csrfToken },
             body: JSON.stringify({

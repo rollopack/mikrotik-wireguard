@@ -2,11 +2,16 @@
 /**
  * Configuration Template for MikroTik WireGuard Peer Manager
  *
- * Copy this file to config.php and replace the placeholder values
- * with your actual MikroTik CHR connection details.
+ * Copy this file to configs/ as a new server configuration.
+ * For example, to add a server named "myserver":
+ *   cp configs/config.php.dist configs/myserver.php
  *
- * IMPORTANT: config.php contains sensitive credentials.
- * Never commit it to version control.
+ * Then replace the placeholder values with your actual MikroTik CHR
+ * connection details. Multiple server configs can coexist in this
+ * directory — the dashboard provides a dropdown to switch between them.
+ *
+ * IMPORTANT: Each .php file in configs/ contains sensitive credentials.
+ * They are gitignored and will NOT be committed.
  */
 
 return [
@@ -29,7 +34,7 @@ return [
         'type' => 'python',              // Bridge type: 'python' (librouteros) or 'ssh' (future)
         'port' => 8728,                  // Native API port: 8728 (plain) or 8729 (TLS)
         'tls' => false,                  // Use TLS (port 8729) if true
-        'python_script' => __DIR__ . '/src/get_peer_data.py', // Path to Python bridge
+        'python_script' => __DIR__ . '/../src/get_peer_data.py', // Path to Python bridge
     ],
 
     // WireGuard Interface and Subnet Settings
@@ -48,9 +53,9 @@ return [
     'dnat_multiplier' => 1000,
 
     // WireGuard Peer Comment
-    // Comment set on the peer connection on the MikroTik.
-    // If empty or omitted, falls back to the 'interface' value.
-    'comment' => 'ResNovae VPN Server',
+    // Used as a display name in the server selector dropdown.
+    // If empty or omitted, falls back to the 'interface' value, then the filename.
+    'comment' => 'My VPN Server',
 
     // Dashboard Auto-Refresh Interval (seconds)
     // How often the peer list refreshes. Higher values reduce CHR load.

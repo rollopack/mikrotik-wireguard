@@ -22,6 +22,7 @@ require_once __DIR__ . '/src/WireGuardManager.php';
 require_once __DIR__ . '/src/i18n.php';
 require_once __DIR__ . '/src/ConfigValidator.php';
 require_once __DIR__ . '/src/auth.php';
+require_once __DIR__ . '/src/ConfigManager.php';
 
 $config = require __DIR__ . '/config.php';
 
@@ -38,6 +39,11 @@ try {
 }
 
 requireAuth();
+
+ConfigManager::persistServerKey($config['_server_key']);
+$availableServers = ConfigManager::getAvailableServers();
+$currentServerKey = $config['_server_key'];
+$currentServerName = $availableServers[$currentServerKey]['name'] ?? $currentServerKey;
 
 header("Content-Security-Policy: default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:;");
 header('X-Content-Type-Options: nosniff');
@@ -106,6 +112,15 @@ try {
                         ? sprintf(t($lang, 'header.api_native'), $config['native_api']['port'] ?? 8728)
                         : t($lang, 'header.api_rest');
                     echo '<span class="api-mode-badge">' . t($lang, 'header.api_mode') . ' ' . $apiModeLabel . '</span>';
+                ?>
+                <select id="serverSelector" class="server-selector" onchange="switchServer(this.value)" aria-label="<?php echo t($lang, 'header.server_select'); ?>">
+                    <?php foreach ($availableServers as $key => $srv): ?>
+                        <option value="<?php echo htmlspecialchars($key); ?>" <?php echo $key === $currentServerKey ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($srv['name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <?php
                     echo '<nav aria-label="' . t($lang, 'auth.user_menu') . '"><a href="?logout" class="auth-badge" title="' . t($lang, 'auth.logout_btn') . '"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>' . t($lang, 'auth.logout_btn') . '</a></nav>';
                 ?>
             </div>
@@ -466,6 +481,8 @@ try {
             refreshInterval: <?php echo json_encode(($config['refresh_interval'] ?? 30) * 1000); ?>,
             handshakeTimeout: <?php echo json_encode(($config['handshake_timeout'] ?? 5) * 60); ?>,
             pageSize: <?php echo json_encode($config['page_size'] ?? 50); ?>,
+            serverKey: <?php echo json_encode($currentServerKey); ?>,
+            servers: <?php echo json_encode($availableServers); ?>,
             translations: <?php echo json_encode(jsTranslations($lang), JSON_UNESCAPED_UNICODE); ?>,
             csrfToken: <?php echo json_encode(getCsrfToken()); ?>,
         };

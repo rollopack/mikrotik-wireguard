@@ -16,6 +16,7 @@ return [
     'header.api_mode'        => 'API Mode:',
     'header.api_rest'        => 'REST (port 443)',
     'header.api_native'      => 'Native (port %s)',
+    'header.server_select'   => 'Select server',
 
     // ── Stats ──────────────────────────────────────────────────
     'stats.total_peers'      => 'Total Peers',
