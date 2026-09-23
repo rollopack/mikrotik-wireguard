@@ -8,6 +8,11 @@ metadata:
   labels:
     {{- include "mikrotik-wireguard.labels" . | nindent 4 }}
 data:
+  config-loader: |
+    <?php
+    require_once __DIR__ . '/src/ConfigManager.php';
+    return ConfigManager::resolveConfig();
+
 {{- range $name, $server := .Values.config.servers }}
   {{- if not $server }}
   {{- fail (printf "config.servers.%s must be a non-empty map" $name) }}

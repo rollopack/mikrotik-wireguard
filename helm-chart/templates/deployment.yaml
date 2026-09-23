@@ -92,6 +92,10 @@ spec:
             - name: data
               mountPath: /data
             - name: router-config
+              mountPath: /var/www/html/config.php
+              subPath: config-loader
+              readOnly: true
+            - name: router-config
               mountPath: /var/www/html/configs
               readOnly: true
             {{- with .Values.extraVolumeMounts }}
