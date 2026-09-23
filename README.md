@@ -17,6 +17,7 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 - **Pagination** — Configurable page size (0 to disable)
 - **i18n** — Italian/English
 - **Startup Validation** — Misconfiguration shows a user-friendly error page
+- **Docker & Helm** — Run as a container via Docker Compose or deploy on Kubernetes with the Helm chart (see [Deployment](#deployment))
 
 ## Requirements
 
@@ -39,6 +40,13 @@ cp configs/config.php.dist configs/myservername.php
 # Set an admin password, then log in at login.php
 # Use the server dropdown in the header to switch between CHRs
 ```
+
+## Deployment
+
+Besides classic hosting on a PHP-enabled web server, the dashboard can run containerized — both options use the same image built from `build/Dockerfile`:
+
+- **Docker Compose** (single host): copy `build/env.example` to `build/.env`, fill in the RouterOS parameters, then `docker compose -f build/compose.yaml up -d`. The container generates `configs/main.php` from the environment at startup and persists auth/sessions in the `mikrotik-wireguard-data` volume (`/data`). After changing `build/.env`, recreate the container (`up -d --force-recreate`) — environment variables are fixed at creation time. Full guide: [`build/README.md`](build/README.md).
+- **Helm** (Kubernetes cluster): configure routers in `config.servers` and credentials via Kubernetes Secrets, then `helm install` the chart in `helm-chart/`. Per-server configs are mounted from a ConfigMap under `configs/` plus the root `config.php` loader. Full guide: [`helm-chart/README.md`](helm-chart/README.md).
 
 ## Configuration
 

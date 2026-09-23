@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.1] - 2026-09-23
+- **Fixed**: Helm deployment restores the root `config.php` loader via a ConfigMap `subPath` mount, fixing HTTP 500 errors on clean container deployments while keeping per-router configs under `configs/`.
+- **Docs**: unified the Docker guides into a single `build/README.md` (image, Compose, registry) and removed `build/README-DOCKER.md`; added Deployment sections to `README.md` and `AGENTS.md`; fixed the plain `docker run` example to provide the required configuration files.
+- **Contributor**: Jorg Mertin (`@HaleyACS`) contributed the Helm loader fix.
+
 ## [2.5.0] - 2026-09-16
 - **Added**: QR Code tab in the peer creation and client export modals for scanning WireGuard configurations with mobile apps.
 - **Added**: Local QR generation from the complete `.conf` content, with responsive layout and accessibility labels.
