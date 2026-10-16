@@ -23,7 +23,7 @@ class MikrotikApiClient implements ClientInterface
     
     public function getAllPeers(): array
     {
-        return $this->queryNativeApi([], 'get_all_peers');
+        return array_values($this->queryNativeApi([], 'get_all_peers'));
     }
     
     public function getServerPublicKey(): string
@@ -216,7 +216,8 @@ class MikrotikApiClient implements ClientInterface
         // If still running after timeout, kill it
         $status = proc_get_status($proc);
         if ($status['running']) {
-            proc_terminate($proc, SIGKILL);
+            // Use the numeric SIGKILL value so this does not depend on ext-pcntl.
+            proc_terminate($proc, 9);
             error_log("Python bridge timed out after {$timeout}s, killed process");
         }
         

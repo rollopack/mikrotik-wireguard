@@ -33,6 +33,25 @@ class authTest extends AuthTestCase {
         $this->assertTrue(isAuthEnabled());
     }
 
+    public function testSaveAdminHashSetsRestrictivePermissions(): void {
+        $path = sys_get_temp_dir() . '/wg-admin-hash-' . bin2hex(random_bytes(4));
+        saveAdminHash('hash-value', $path);
+        try {
+            $this->assertEquals('hash-value', file_get_contents($path));
+            clearstatcache(true, $path);
+            // The file is written to a local filesystem here, where chmod is honored.
+            $this->assertEquals(0600, fileperms($path) & 0777);
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    public function testSaveAdminHashDefaultPathIsReadable(): void {
+        saveAdminHash('default-path-hash');
+        clearstatcache(true, $this->adminHashPath);
+        $this->assertEquals('default-path-hash', getAdminHash());
+    }
+
     public function testLoginWithCorrectPassword(): void {
         $this->createHashFile();
         if (session_status() === PHP_SESSION_ACTIVE) {

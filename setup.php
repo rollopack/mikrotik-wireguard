@@ -30,6 +30,7 @@ if (isAuthEnabled()) {
 
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
+header("Content-Security-Policy: default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'none'; img-src 'self' data:;");
 
 $error = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -46,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = t($lang, 'auth.setup_mismatch');
         } else {
             $hash = password_hash($password, PASSWORD_BCRYPT);
-            file_put_contents(__DIR__ . '/.admin-hash', $hash);
+            saveAdminHash($hash);
             header('Location: login.php');
             exit;
         }

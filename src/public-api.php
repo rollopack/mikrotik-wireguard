@@ -24,10 +24,12 @@ try {
 
 requireApiToken();
 
-if (isset($_GET['server']) && $_GET['server'] !== '' && !ConfigManager::serverExists($_GET['server'])) {
+// Reject an unknown ?server= instead of silently falling back to the default
+// config (checked via ConfigManager, shared with src/api.php).
+$serverError = ConfigManager::validateRequestedServer($_GET['server'] ?? null);
+if ($serverError !== null) {
     http_response_code(400);
-    $serverVal = is_string($_GET['server']) ? $_GET['server'] : 'invalid';
-    echo json_encode(['success' => false, 'error' => 'Unknown server: ' . $serverVal]);
+    echo json_encode(['success' => false, 'error' => $serverError]);
     exit;
 }
 

@@ -221,7 +221,7 @@ class ConfigValidator {
         <div class="error-title">Configuration Error</div>
         <div class="error-message"><?php echo $escaped; ?></div>
         <div class="hint">
-            Fix the issue in <code>config.php</code> (copy from <code>config.example.php</code> if needed), then reload.
+            Fix the issue in the corresponding file under <code>configs/</code> (copy <code>configs/config.php.dist</code> if you need a template), then reload.
         </div>
     </div>
 </body>

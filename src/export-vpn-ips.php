@@ -3,6 +3,7 @@
 
 require_once __DIR__ . '/ClientFactory.php';
 require_once __DIR__ . '/WireGuardManager.php';
+require_once __DIR__ . '/VpnIpExporter.php';
 
 $config = require __DIR__ . '/../config.php';
 
@@ -10,29 +11,17 @@ $outputFile = $argv[1] ?? __DIR__ . '/../vpn-ips.txt';
 
 try {
     $client = ClientFactory::create($config);
+    $exporter = new VpnIpExporter($client);
 
     // WireGuard peers
-    $wgIps = WireGuardManager::extractUniqueIpv4Addresses($client->getPeers());
+    $wgIps = $exporter->wireguardIps();
 
-    // SSTP secrets
-    $secrets = $client->getPppSecrets();
-    $sstpIps = [];
-    foreach ($secrets as $secret) {
-        $disabled = $secret['disabled'] ?? 'no';
-        $service = $secret['service'] ?? '';
-        if ($service === 'sstp' && !WireGuardManager::normalizeBool($disabled)) {
-            if (!empty($secret['remote-address'])) {
-                $ip = $secret['remote-address'];
-                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                    $sstpIps[] = $ip;
-                }
-            }
-        }
+    // SSTP secrets (no active fallback for the CLI export)
+    $secretError = null;
+    $sstpIps = $exporter->serviceIps('sstp', false, $secretError);
+    if ($secretError !== null) {
+        throw new Exception($secretError);
     }
-    $sstpIps = array_unique($sstpIps);
-    usort($sstpIps, function ($a, $b) {
-        return strcmp(inet_pton($a), inet_pton($b));
-    });
 
     // Build output
     $lines = [];

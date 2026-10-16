@@ -8,6 +8,8 @@ require_once __DIR__ . '/WireGuardManager.php';
 require_once __DIR__ . '/i18n.php';
 require_once __DIR__ . '/ConfigValidator.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/ConfigManager.php';
+require_once __DIR__ . '/VpnIpExporter.php';
 
 $config = require __DIR__ . '/../config.php';
 
@@ -28,6 +30,15 @@ $client = ClientFactory::create($config);
 $manager = new WireGuardManager($client, $config);
 
 header('Content-Type: application/json');
+
+// Reject an unknown ?server= instead of silently falling back to the default
+// config (checked via ConfigManager, shared with src/public-api.php).
+$serverError = ConfigManager::validateRequestedServer($_GET['server'] ?? null);
+if ($serverError !== null) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => $serverError]);
+    exit;
+}
 
 if (!isset($_GET['action'])) {
     echo json_encode(['success' => false, 'error' => t($lang, 'api.action_required')]);
@@ -167,64 +178,18 @@ try {
         $includeSstp = !empty($input['include_sstp']);
         $includePptp = !empty($input['include_pptp']);
 
-        $wgIps = WireGuardManager::extractUniqueIpv4Addresses($client->getPeers());
+        $exporter = new VpnIpExporter($client);
+        $wgIps = $exporter->wireguardIps();
 
         $secretIpsSstp = [];
         $secretIpsPptp = [];
         $secretError = null;
 
-        $fetchSecretIps = function (string $service) use ($client, &$secretError): array {
-            $ips = [];
-            try {
-                $secrets = $client->getPppSecrets();
-                foreach ($secrets as $secret) {
-                    $disabled = $secret['disabled'] ?? 'no';
-                    if (($secret['service'] ?? '') === $service && !WireGuardManager::normalizeBool($disabled)) {
-                        $addr = $secret['remote-address'] ?? $secret['address'] ?? '';
-                        if (!empty($addr) && filter_var($addr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                            $ips[] = $addr;
-                        }
-                    }
-                }
-            } catch (Exception $e) {
-                if ($secretError === null) {
-                    $secretError = $e->getMessage();
-                }
-            }
-
-            if (count($ips) === 0 && $secretError === null) {
-                try {
-                    $active = $client->getPppActive();
-                    foreach ($active as $session) {
-                        if (($session['service'] ?? '') === $service) {
-                            $addr = $session['address'] ?? $session['remote-address'] ?? '';
-                            if (!empty($addr) && filter_var($addr, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
-                                $ips[] = $addr;
-                            }
-                        }
-                    }
-                } catch (Exception $e) {
-                    if ($secretError === null) {
-                        $secretError = $e->getMessage();
-                    }
-                }
-            }
-
-            $ips = array_unique($ips);
-            if (count($ips) > 0) {
-                usort($ips, function ($a, $b) {
-                    return strcmp(inet_pton($a), inet_pton($b));
-                });
-            }
-
-            return $ips;
-        };
-
         if ($includeSstp) {
-            $secretIpsSstp = $fetchSecretIps('sstp');
+            $secretIpsSstp = $exporter->serviceIps('sstp', true, $secretError);
         }
         if ($includePptp) {
-            $secretIpsPptp = $fetchSecretIps('pptp');
+            $secretIpsPptp = $exporter->serviceIps('pptp', true, $secretError);
         }
 
         $lines = [];

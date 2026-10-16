@@ -115,6 +115,31 @@ class ConfigManagerTest extends TestCase
         $this->assertFalse(ConfigManager::serverExists(''));
     }
 
+    public function testValidateRequestedServerAcceptsAbsentParam(): void
+    {
+        $this->assertNull(ConfigManager::validateRequestedServer(null));
+    }
+
+    public function testValidateRequestedServerAcceptsEmptyParam(): void
+    {
+        $this->assertNull(ConfigManager::validateRequestedServer(''));
+    }
+
+    public function testValidateRequestedServerAcceptsKnownServer(): void
+    {
+        $this->assertNull(ConfigManager::validateRequestedServer('01-resnovae'));
+    }
+
+    public function testValidateRequestedServerRejectsUnknownServer(): void
+    {
+        $this->assertEquals('Unknown server: nonexistent', ConfigManager::validateRequestedServer('nonexistent'));
+    }
+
+    public function testValidateRequestedServerRejectsNonString(): void
+    {
+        $this->assertEquals('Unknown server: invalid', ConfigManager::validateRequestedServer(['x']));
+    }
+
     public function testResnovaeConfigValid(): void
     {
         $config = require __DIR__ . '/../configs/01-resnovae.php';

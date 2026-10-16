@@ -23,6 +23,8 @@ require_once __DIR__ . '/src/i18n.php';
 require_once __DIR__ . '/src/ConfigValidator.php';
 require_once __DIR__ . '/src/auth.php';
 require_once __DIR__ . '/src/ConfigManager.php';
+require_once __DIR__ . '/src/AppInfo.php';
+require_once __DIR__ . '/src/MarkdownRenderer.php';
 
 $config = require __DIR__ . '/config.php';
 
@@ -52,17 +54,31 @@ header('X-Frame-Options: DENY');
 
 $lang = loadLanguage($config['lang'] ?? 'en');
 
+// About dialog content: version from VERSION, README rendered from Markdown.
+$appVersion = AppInfo::version();
+$readmePath = __DIR__ . '/README.md';
+$readmeHtml = is_file($readmePath)
+    ? MarkdownRenderer::render((string)file_get_contents($readmePath), [
+        'link_base' => AppInfo::repositoryUrl() . '/blob/main/',
+        // Skip the installation-oriented sections (title, features, quick
+        // start, deployment) and open the About content on Configuration.
+        'from_heading' => 'Configuration',
+    ])
+    : '';
+
 try {
     $maxPeers = WireGuardManager::maxPeers($config['subnet'], $config['server_ip']);
 } catch (Exception $e) {
     $maxPeers = '?';
 }
 
-// Test connection to CHR
+// Test connection to CHR and keep the peers for the initial table render.
+// $initialPeers stays null on failure so the frontend knows to fetch instead.
 $connectionError = null;
+$initialPeers = null;
 try {
     $client = ClientFactory::create($config);
-    $client->getPeers();
+    $initialPeers = $client->getPeers();
 } catch (Exception $e) {
     $connectionError = $e->getMessage();
 }
@@ -115,6 +131,7 @@ try {
                     <?php endforeach; ?>
                 </select>
                 <?php
+                    echo '<button type="button" class="auth-badge" data-action="open-about" title="' . t($lang, 'header.about') . '" aria-label="' . t($lang, 'header.about') . '">?</button>';
                     echo '<nav aria-label="' . t($lang, 'auth.user_menu') . '"><a href="?logout" class="auth-badge" title="' . t($lang, 'auth.logout_btn') . '"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:14px;height:14px;vertical-align:middle;margin-right:3px;"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>' . t($lang, 'auth.logout_btn') . '</a></nav>';
                 ?>
             </div>
@@ -478,6 +495,36 @@ try {
         </div>
     </div>
 
+    <!-- About Modal -->
+    <div class="modal-backdrop" id="aboutModalBackdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="aboutModalHeading">
+        <div class="modal modal-about">
+            <div class="modal-header">
+                <h2 class="modal-heading" id="aboutModalHeading"><?php echo t($lang, 'about.title'); ?></h2>
+                <button class="close-btn" data-action="close-modal" data-modal="aboutModalBackdrop" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="about-meta">
+                    <strong><?php echo t($lang, 'header.title'); ?></strong> &middot; <?php echo t($lang, 'about.version'); ?> <?php echo htmlspecialchars($appVersion); ?>
+                </p>
+                <p class="about-meta">
+                    <a href="<?php echo htmlspecialchars(AppInfo::repositoryUrl()); ?>" target="_blank" rel="noopener noreferrer"><?php echo t($lang, 'about.repository'); ?></a>
+                </p>
+                <div class="about-markdown">
+                    <?php
+                        if ($readmeHtml !== '') {
+                            echo $readmeHtml;
+                        } else {
+                            echo '<p>' . t($lang, 'about.readme_unavailable') . '</p>';
+                        }
+                    ?>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="aboutModalBackdrop"><?php echo t($lang, 'modal.close'); ?></button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div class="toast" id="toast" role="status" aria-live="polite">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" style="color: var(--success);" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
@@ -486,20 +533,14 @@ try {
 
     <script nonce="<?php echo $cspNonce; ?>">
         const AppConfig = {
-            endpoint: <?php echo json_encode($config['endpoint']); ?>,
-            clientAllowedIps: <?php echo json_encode($config['client_allowed_ips']); ?>,
-            interface: <?php echo json_encode($config['interface']); ?>,
-            comment: <?php echo json_encode($config['comment'] ?? ''); ?>,
-            serverIp: <?php echo json_encode($config['server_ip']); ?>,
-            serverPublicKey: '',
-            subnet: <?php echo json_encode($config['subnet']); ?>,
+            initialPeers: <?php echo json_encode($initialPeers, JSON_UNESCAPED_UNICODE); ?>,
+            endpointPort: <?php echo json_encode(WireGuardManager::extractEndpointPort($config['endpoint'] ?? '')); ?>,
             dnatBase: <?php echo json_encode($config['dnat_base'] ?? 30000); ?>,
             dnatMultiplier: <?php echo json_encode($config['dnat_multiplier'] ?? 1000); ?>,
             refreshInterval: <?php echo json_encode(($config['refresh_interval'] ?? 30) * 1000); ?>,
             handshakeTimeout: <?php echo json_encode(($config['handshake_timeout'] ?? 5) * 60); ?>,
             pageSize: <?php echo json_encode($config['page_size'] ?? 50); ?>,
             serverKey: <?php echo json_encode($currentServerKey); ?>,
-            servers: <?php echo json_encode($availableServers); ?>,
             translations: <?php echo json_encode(jsTranslations($lang), JSON_UNESCAPED_UNICODE); ?>,
             csrfToken: <?php echo json_encode(getCsrfToken()); ?>,
             exportMode: <?php echo json_encode($config['export_mode'] ?? 'rsc'); ?>,

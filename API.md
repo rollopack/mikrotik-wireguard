@@ -10,7 +10,7 @@ openssl rand -hex 32 > .api-token
 chmod 600 .api-token
 ```
 
-- The token file is gitignored.
+- The token file is gitignored and must stay owner-only (`chmod 600`). The Docker/Compose and Helm deployments set this automatically; the programmatic writer `saveApiToken()` in `src/auth.php` also forces `0600`.
 - **Required**: make sure the web server blocks dotfiles (add the `<FilesMatch "^\.">` block from `.htaccess.example` to your live `.htaccess`), otherwise the token is downloadable. Verify with `https://your-host/.api-token` → must return **403**.
 - If a token is leaked, rotate it: overwrite `.api-token` with a new value.
 

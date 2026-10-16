@@ -33,7 +33,7 @@ if (isLoggedIn()) {
     exit;
 }
 
-header("Content-Security-Policy: default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline'; img-src 'self' data:;");
+header("Content-Security-Policy: default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'none'; img-src 'self' data:;");
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 

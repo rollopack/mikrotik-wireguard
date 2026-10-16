@@ -17,6 +17,13 @@ return [
     'header.api_rest'        => 'REST (port 443)',
     'header.api_native'      => 'Native (port %s)',
     'header.server_select'   => 'Select server',
+    'header.about'           => 'About',
+
+    // ── About ──────────────────────────────────────────────────
+    'about.title'            => 'About',
+    'about.version'          => 'Version',
+    'about.repository'       => 'GitHub repository',
+    'about.readme_unavailable' => 'README not available.',
 
     // ── Stats ──────────────────────────────────────────────────
     'stats.total_peers'      => 'Total Peers',
@@ -57,7 +64,6 @@ return [
     'modal.add.tab_conf'         => 'Configuration (.conf)',
     'modal.add.tab_script'       => 'RouterOS Script (.rsc)',
     'modal.add.tab_qrcode'       => 'QR Code',
-    'modal.add.tab_qrcode'       => 'QR Code',
     'modal.add.copy_title'       => 'Copy code',
     'modal.close'                => 'Close',
     'modal.add.download_conf'    => 'Download .conf file',
@@ -91,11 +97,9 @@ return [
     'modal.export.tab_conf'        => 'Configuration (.conf)',
     'modal.export.tab_script'      => 'RouterOS Script (.rsc)',
     'modal.export.tab_qrcode'      => 'QR Code',
-    'modal.export.tab_qrcode'      => 'QR Code',
     'modal.export.download_conf'   => 'Download .conf file',
     'modal.export.download_script' => 'Download .rsc script',
     'modal.export.close'           => 'Close',
-    'modal.qrcode.description'     => 'Scan this code with the WireGuard mobile app.',
     'modal.qrcode.description'     => 'Scan this code with the WireGuard mobile app.',
 
     // ── Export VPN IPs Modal ───────────────────────────────────
@@ -130,7 +134,6 @@ return [
     'auth.setup_minlength'   => 'Password must be at least 8 characters.',
     'auth.setup_mismatch'    => 'Passwords do not match.',
     'auth.user_menu'         => 'User menu',
-    'auth.setup_prompt'      => 'Set admin password',
 
     // ── API error messages ─────────────────────────────────────
     'api.action_required'    => 'Action not specified.',
@@ -160,6 +163,7 @@ return [
     'js.peer_enabled'         => 'Peer enabled successfully!',
     'js.toggle_error'         => 'Error toggling peer: %s',
     'js.interface_disabled'   => 'Interface disabled',
+    'js.interface_listen_port' => 'Listen port',
 
     'js.regenerate_btn'       => 'Regenerate Key & Download Config',
     'js.regenerate_error'     => 'Error: %s',
@@ -190,7 +194,6 @@ return [
     'js.qrcode_alt'           => 'QR code containing the WireGuard client configuration',
     'js.qrcode_error'         => 'Unable to generate the QR code.',
     'js.config_updated'       => 'Configuration Updated',
-    'js.error_prefix'         => 'Error: %s',
     'js.pagination_info'      => 'Page %d of %d (%d total)',
     'js.empty_title'          => 'No peers found',
     'js.empty_description'    => 'No clients configured on this WireGuard interface.',

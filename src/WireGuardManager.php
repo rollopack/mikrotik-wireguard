@@ -79,6 +79,9 @@ class WireGuardManager {
      *
      * RouterOS REST API returns 'true'/'false', native API returns 'yes'/'no',
      * and PHP native API bridge may return native bools.
+     *
+     * For the stricter, JSON-facing variant used by the public API see
+     * parseBoolStrict().
      */
     public static function normalizeBool($value): bool {
         return $value === true || $value === 'true' || $value === 'yes';
@@ -246,7 +249,7 @@ class WireGuardManager {
                 $serverPublicKey,
                 $this->config['endpoint'] ?? '',
                 $this->config['client_allowed_ips'] ?? '',
-                'wg-resnovae',
+                $this->config['interface'] ?? 'wg-resnovae',
                 $comment,
                 $this->config['server_ip'] ?? '3.0.0.1',
                 $this->config['subnet'] ?? '3.0.0.0/21',
@@ -302,25 +305,31 @@ class WireGuardManager {
         $this->client->updatePeer($id, $payload);
     }
 
-/**
- * Normalizza un valore booleano in modo rigoroso.
- * Accetta solo: true, false, "1", "0", "true", "false".
- * Restituisce null per valori invalidi.
- *
- * @param mixed $value
- * @return bool|null
- */
-public static function parseBoolStrict($value): ?bool
-{
-    if (is_bool($value)) {
-        return $value;
+    /**
+     * Parse a strictly boolean value into a PHP bool.
+     *
+     * Accepts true/false and the explicit string forms "1"/"0", "true"/"false",
+     * "on"/"off". Any other value returns null.
+     *
+     * Unlike normalizeBool(), which accepts the RouterOS 'yes'/'no' values,
+     * this is the stricter, JSON-facing variant used by the public API.
+     *
+     * @param mixed $value
+     * @return bool|null
+     */
+    public static function parseBoolStrict($value): ?bool {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (!is_scalar($value)) {
+            return null;
+        }
+        $mapped = [
+            '1' => true, 'true' => true, 'on' => true,
+            '0' => false, 'false' => false, 'off' => false,
+        ];
+        return $mapped[strtolower((string)$value)] ?? null;
     }
-    $mapped = [
-        '1' => true, 'true' => true, 'on' => true,
-        '0' => false, 'false' => false, 'off' => false,
-    ];
-    return $mapped[strtolower($value ?? '')] ?? null;
-}
 
     /**
      * Regenerate key pair for an existing peer and update public-key on the CHR.
@@ -606,5 +615,21 @@ RSC;
         }
 
         return trim($host, '[]');
+    }
+
+    /**
+     * Extract the port from a WireGuard endpoint ("host:port").
+     *
+     * Returns null when the endpoint has no port or is invalid, so callers can
+     * decide how to fall back (RouterOS derives it from the listen port).
+     */
+    public static function extractEndpointPort(string $endpoint): ?int
+    {
+        $parsed = parse_url('udp://' . trim($endpoint));
+        if ($parsed === false || !isset($parsed['port'])) {
+            return null;
+        }
+        $port = (int)$parsed['port'];
+        return ($port >= 1 && $port <= 65535) ? $port : null;
     }
 }

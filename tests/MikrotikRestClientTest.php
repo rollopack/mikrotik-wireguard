@@ -45,13 +45,6 @@ class MikrotikRestClientTest extends TestCase {
         $this->assertEquals('WG-Interface', $client->getInterface());
     }
 
-    public function testSetInterface(): void {
-        $client = new MikrotikRestClient('192.168.88.1', 'admin', 'pass');
-        $this->assertEquals('WireGuard-ResNovae', $client->getInterface());
-        $client->setInterface('Custom-WG');
-        $this->assertEquals('Custom-WG', $client->getInterface());
-    }
-
     public function testRequestThrowsOnNetworkError(): void {
         $client = new MikrotikRestClient('192.0.2.1', 'admin', 'pass', false, 1);
         $threw = false;

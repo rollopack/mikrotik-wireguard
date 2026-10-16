@@ -29,7 +29,7 @@ class PublicApiAuthTest extends TestCase {
     }
 
     protected function createTokenFile(string $token): void {
-        file_put_contents($this->tokenPath, $token);
+        saveApiToken($token, $this->tokenPath);
         clearstatcache(true, $this->tokenPath);
     }
 
@@ -83,5 +83,18 @@ class PublicApiAuthTest extends TestCase {
     public function testIsApiTokenValidNoFile(): void {
         $this->removeTokenFile();
         $this->assertFalse(isApiTokenValid('anything'));
+    }
+
+    public function testSaveApiTokenRestrictsPermissions(): void {
+        $path = sys_get_temp_dir() . '/wg-api-token-' . bin2hex(random_bytes(4));
+        try {
+            saveApiToken('tok-value', $path);
+            $this->assertEquals('tok-value', file_get_contents($path));
+            clearstatcache(true, $path);
+            // Local filesystem here, where chmod is honored.
+            $this->assertEquals(0600, fileperms($path) & 0777);
+        } finally {
+            @unlink($path);
+        }
     }
 }

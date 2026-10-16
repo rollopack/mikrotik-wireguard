@@ -156,8 +156,9 @@ class MikrotikApiClientTest extends TestCase {
 
     public function testGetAllPeers(): void {
         $client = new TestableMikrotikApiClient($this->baseConfig);
+        // The Python bridge returns peers keyed by name for get_all_peers.
         $client->setMockResponse('get_all_peers', [
-            ['name' => 'Peer1'],
+            'Peer1' => ['name' => 'Peer1'],
         ]);
 
         $result = $client->getAllPeers();

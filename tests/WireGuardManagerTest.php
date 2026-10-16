@@ -4,7 +4,40 @@ require_once __DIR__ . '/run_tests.php';
 require_once __DIR__ . '/MockMikrotikRestClient.php';
 
 class WireGuardManagerTest extends TestCase {
-    
+
+    public function testNormalizeBool(): void {
+        $this->assertTrue(WireGuardManager::normalizeBool(true));
+        $this->assertTrue(WireGuardManager::normalizeBool('true'));
+        $this->assertTrue(WireGuardManager::normalizeBool('yes'));
+        $this->assertFalse(WireGuardManager::normalizeBool('false'));
+        $this->assertFalse(WireGuardManager::normalizeBool('no'));
+        $this->assertFalse(WireGuardManager::normalizeBool(null));
+    }
+
+    public function testParseBoolStrict(): void {
+        $this->assertTrue(WireGuardManager::parseBoolStrict(true));
+        $this->assertFalse(WireGuardManager::parseBoolStrict(false));
+        $this->assertTrue(WireGuardManager::parseBoolStrict('true'));
+        $this->assertTrue(WireGuardManager::parseBoolStrict('1'));
+        $this->assertTrue(WireGuardManager::parseBoolStrict('ON'));
+        $this->assertFalse(WireGuardManager::parseBoolStrict('0'));
+        $this->assertFalse(WireGuardManager::parseBoolStrict('false'));
+        $this->assertFalse(WireGuardManager::parseBoolStrict('off'));
+        $this->assertNull(WireGuardManager::parseBoolStrict('yes'));
+        $this->assertNull(WireGuardManager::parseBoolStrict('maybe'));
+        $this->assertNull(WireGuardManager::parseBoolStrict(null));
+        $this->assertNull(WireGuardManager::parseBoolStrict(['x']));
+    }
+
+    public function testExtractEndpointPort(): void {
+        $this->assertEquals(13231, WireGuardManager::extractEndpointPort('vpn.example.com:13231'));
+        $this->assertEquals(51820, WireGuardManager::extractEndpointPort('  45.145.201.102:51820  '));
+        $this->assertEquals(13231, WireGuardManager::extractEndpointPort('[2001:db8::1]:13231'));
+        $this->assertNull(WireGuardManager::extractEndpointPort('vpn.example.com'));
+        $this->assertNull(WireGuardManager::extractEndpointPort('[2001:db8::1]'));
+        $this->assertNull(WireGuardManager::extractEndpointPort(''));
+    }
+
     public function testMaxPeers() {
         $this->assertEquals(254, WireGuardManager::maxPeers('3.0.0.0/24', '3.0.0.1'));
         $this->assertEquals(2046, WireGuardManager::maxPeers('3.0.0.0/21', '3.0.0.1'));
@@ -200,6 +233,35 @@ class WireGuardManagerTest extends TestCase {
         $this->assertEquals('WireGuard-ResNovae', $putRequest['data']['interface']);
         $this->assertEquals('3.0.0.2/32', $putRequest['data']['allowed-address']);
         $this->assertEquals('Test-Client-New', $putRequest['data']['name']);
+    }
+
+    public function testAddPeerRscUsesConfiguredInterface() {
+        $mockClient = new MockMikrotikRestClient();
+        $mockClient->setResponse('GET', '/interface/wireguard/peers', []);
+        $mockClient->setResponse('GET', '/interface/wireguard', [
+            ['name' => 'Custom-WG', 'public-key' => 'SERVER_PUBLIC_KEY']
+        ]);
+        $mockClient->setResponse('PUT', '/interface/wireguard/peers', ['.id' => '*1d']);
+        $mockClient->setResponse('GET', '/interface/wireguard/peers', []);
+
+        $manager = new WireGuardManager($mockClient, [
+            'interface' => 'Custom-WG',
+            'subnet' => '3.0.0.0/24',
+            'server_ip' => '3.0.0.1',
+            'endpoint' => 'vpn.example.com:13231',
+            'client_allowed_ips' => '3.0.0.0/24'
+        ]);
+
+        $result = $manager->addPeer('Test-Client-Interface');
+
+        $this->assertTrue(
+            str_contains($result['script'], 'add name="Custom-WG"'),
+            'RSC should use the configured interface name'
+        );
+        $this->assertFalse(
+            str_contains($result['script'], 'wg-resnovae'),
+            'RSC should not use the legacy hardcoded interface name'
+        );
     }
 
     public function testAddPeerIncludesRouterOsClientExportMetadata() {

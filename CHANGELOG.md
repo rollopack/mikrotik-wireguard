@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.0] - 2026-10-16
+- **Added**: header badge now shows the WireGuard listen port, but only when it differs from the port in the configured endpoint.
+- **Added**: "?" button in the header opening an About popup with the app version and the README, rendered locally by a dependency-free Markdown renderer that starts at the Configuration section.
+- **Fixed**: generated `.rsc` client scripts use the interface name from the server config.
+- **Fixed**: native-mode peer lists are normalized so IP allocation and collision detection operate on a consistent array.
+- **Fixed**: the Python bridge is force-killed on timeout even when `ext-pcntl` is unavailable.
+- **Fixed**: dashboard pagination no longer goes out of range while a client-side filter is active.
+- **Fixed**: the configuration error hint now points to the actual config files instead of a stale example name.
+- **Fixed**: on narrow screens the header badge wraps instead of pushing the logout button off screen.
+- **Changed**: the dashboard reuses the peers fetched during the connection test, removing a duplicate request on first load.
+- **Changed**: the About popup uses a more readable link colour and wider spacing between sections.
+- **Security**: `.admin-hash` and `.api-token` are written with owner-only permissions (`0600`); new `saveApiToken()` helper.
+- **Security**: `setup.php` now sends a Content-Security-Policy and `login.php` no longer allows inline scripts.
+- **Security**: `api.php` rejects an unknown `?server=` parameter with HTTP `400` instead of silently falling back to the default config.
+- **Docs**: fixed the configuration table and secret-permission guidance in `README.md`, refreshed `API.md`, and updated `AGENTS.md`.
+
 ## [2.5.1] - 2026-09-23
 - **Fixed**: Helm deployment restores the root `config.php` loader via a ConfigMap `subPath` mount, fixing HTTP 500 errors on clean container deployments while keeping per-router configs under `configs/`.
 - **Docs**: unified the Docker guides into a single `build/README.md` (image, Compose, registry) and removed `build/README-DOCKER.md`; added Deployment sections to `README.md` and `AGENTS.md`; fixed the plain `docker run` example to provide the required configuration files.

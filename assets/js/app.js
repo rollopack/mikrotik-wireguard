@@ -44,6 +44,7 @@ let searchQuery = localStorage.getItem('searchQuery') || '';
 let highlightId = null;
 let pendingHighlightId = null;
 let currentPage = 1;
+let currentTotalPages = 1;
 let lastFocusedElement = null;
 
 
@@ -60,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('searchInput').value = searchQuery;
-    loadPeers().then(() => updateSortIcons());
+    initPeers();
     document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; applyFiltersAndSort(); });
     document.getElementById('hideOfflineBtn').addEventListener('click', toggleHideOffline);
     document.getElementById('serverSelector').addEventListener('change', (e) => switchServer(e.target.value));
@@ -81,6 +82,7 @@ function handleDelegateClick(e) {
     const action = el.dataset.action;
     switch (action) {
         case 'open-add': openAddModal(); break;
+        case 'open-about': openModal('aboutModalBackdrop'); break;
         case 'open-export-vpn': openExportVpnIpsModal(); break;
         case 'sort': sortPeers(el.dataset.sort); break;
         case 'prev-page': goToPage(currentPage - 1); break;
@@ -125,6 +127,22 @@ function handleDelegateKeydown(e) {
 }
 
 /* ── Data Loading ───────────────────────────────────────────── */
+// Seed the table from the peers already fetched by the server-side
+// connection test, avoiding a duplicate get_peers round-trip on first load.
+// When $initialPeers was null (connection failure) the API is queried instead.
+function initPeers() {
+    if (Array.isArray(AppConfig.initialPeers)) {
+        allPeers = AppConfig.initialPeers;
+        currentPage = 1;
+        applyFiltersAndSort();
+        highlightPendingPeer();
+        fetchInterfaceStatus();
+        updateSortIcons();
+    } else {
+        loadPeers().then(() => updateSortIcons());
+    }
+}
+
 async function loadPeers() {
     const loader = document.getElementById('tableLoader');
     loader.classList.add('active');
@@ -133,7 +151,6 @@ async function loadPeers() {
         const data = await res.json();
         if (data.success) {
             allPeers = data.peers;
-            AppConfig.serverPublicKey = data.server_public_key || '';
             currentPage = 1;
             applyFiltersAndSort();
             highlightPendingPeer();
@@ -155,7 +172,6 @@ async function refreshPeers() {
         const data = await res.json();
         if (data.success) {
             allPeers = data.peers;
-            AppConfig.serverPublicKey = data.server_public_key || '';
             applyFiltersAndSort();
             fetchInterfaceStatus();
         }
@@ -190,7 +206,13 @@ function updateInterfaceStatusUI(iface) {
 
     label.style.display = 'inline';
     if (iface.running) {
-        label.innerHTML = `<span class="badge-active">${escapeHtml(iface.name)}</span>`;
+        // Show the listen port only when it differs from the configured
+        // endpoint port (otherwise it is redundant with "Public Endpoint").
+        const port = parseInt(iface['listen-port'] || 0, 10);
+        const showPort = port > 0 && port !== AppConfig.endpointPort;
+        const portSuffix = showPort ? `:${port}` : '';
+        const portTitle = showPort ? ` title="${t('js.interface_listen_port')}"` : '';
+        label.innerHTML = `<span class="badge-active"${portTitle}>${escapeHtml(iface.name)}${portSuffix}</span>`;
     } else {
         label.innerHTML = `<span class="badge-disabled">${t('js.interface_disabled')}</span>`;
     }
@@ -340,12 +362,14 @@ function renderPeers(peers) {
         emptyState.style.display = 'flex';
         document.getElementById('stat-active-peers').innerText = '0';
         document.getElementById('pagination').style.display = 'none';
+        currentTotalPages = 1;
         return;
     }
 
     emptyState.style.display = 'none';
 
     const totalPages = PAGE_SIZE > 0 ? Math.ceil(peers.length / PAGE_SIZE) || 1 : 1;
+    currentTotalPages = totalPages;
     if (currentPage > totalPages) currentPage = totalPages;
     const pagePeers = PAGE_SIZE > 0 ? peers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE) : peers;
 
@@ -451,8 +475,9 @@ function renderPagination(page, totalPages, totalPeers) {
 
 function goToPage(page) {
     if (PAGE_SIZE <= 0) return;
-    const totalPages = Math.ceil(allPeers.length / PAGE_SIZE) || 1;
-    if (page < 1 || page > totalPages) return;
+    // Use the page count of the currently filtered list, not of all peers,
+    // so pagination stays consistent while filters are active.
+    if (page < 1 || page > currentTotalPages) return;
     currentPage = page;
     applyFiltersAndSort();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -538,13 +563,18 @@ function closeModal(id) {
     lastFocusedElement = null;
 }
 
+function closeAboutModal() {
+    closeModal('aboutModalBackdrop');
+}
+
 const CLOSE_HANDLERS = {
     'addModalBackdrop': closeAddModal,
     'editModalBackdrop': closeEditModal,
     'deleteModalBackdrop': closeDeleteModal,
     'confirmModalBackdrop': closeConfirmModal,
     'exportModalBackdrop': closeExportModal,
-    'exportVpnIpsModalBackdrop': closeExportVpnIpsModal
+    'exportVpnIpsModalBackdrop': closeExportVpnIpsModal,
+    'aboutModalBackdrop': closeAboutModal
 };
 
 function closeModalById(id) {

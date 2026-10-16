@@ -79,6 +79,28 @@ class ConfigManager
         return isset(self::$availableServers[$key]);
     }
 
+    /**
+     * Validate the ?server= request parameter.
+     *
+     * Single source of truth for the entrypoints (api.php, public-api.php):
+     * an unknown value must be rejected instead of silently falling back to
+     * the default config.
+     *
+     * @param mixed $requested Raw $_GET['server'] value (or null when absent).
+     * @return string|null Error message when the requested server is unknown,
+     *                     null when the value is valid or absent.
+     */
+    public static function validateRequestedServer($requested): ?string
+    {
+        if ($requested === null || $requested === '') {
+            return null;
+        }
+        if (!self::serverExists($requested)) {
+            return 'Unknown server: ' . (is_string($requested) ? $requested : 'invalid');
+        }
+        return null;
+    }
+
     public static function resolveConfig(): array
     {
         if (self::$activeConfig !== null) {

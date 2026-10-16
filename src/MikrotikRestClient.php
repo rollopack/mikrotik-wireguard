@@ -242,17 +242,6 @@ class MikrotikRestClient implements ClientInterface {
     }
 
     /**
-     * Set the WireGuard interface name.
-     *
-     * @param string $interface
-     * @return void
-     */
-    public function setInterface(string $interface): void
-    {
-        $this->interface = $interface;
-    }
-
-    /**
      * Add a new WireGuard peer.
      *
      * @param array $payload Peer data (interface, public-key, allowed-address, name)

@@ -30,6 +30,43 @@ function isAuthEnabled(): bool
     return getAdminHash() !== null;
 }
 
+/**
+ * Write a secret file with owner-only permissions.
+ *
+ * On filesystems that do not enforce chmod (e.g. CIFS mounts) the chmod is a
+ * no-op; the web server config must restrict access in that case.
+ *
+ * @param string $path
+ * @param string $contents
+ */
+function writeSecretFile(string $path, string $contents): void
+{
+    file_put_contents($path, $contents);
+    @chmod($path, 0600);
+}
+
+/**
+ * Persist the admin password hash, restricting file permissions to the owner.
+ *
+ * @param string $hash password_hash() output
+ * @param string|null $file target path (defaults to the project .admin-hash)
+ */
+function saveAdminHash(string $hash, ?string $file = null): void
+{
+    writeSecretFile($file ?? __DIR__ . '/../.admin-hash', $hash);
+}
+
+/**
+ * Persist the public API bearer token, restricting file permissions to the owner.
+ *
+ * @param string $token
+ * @param string|null $file target path (defaults to the project .api-token)
+ */
+function saveApiToken(string $token, ?string $file = null): void
+{
+    writeSecretFile($file ?? __DIR__ . '/../.api-token', $token);
+}
+
 function getApiToken(): ?string
 {
     $tokenFile = __DIR__ . '/../.api-token';

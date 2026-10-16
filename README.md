@@ -17,6 +17,7 @@ A lightweight PHP web dashboard for managing WireGuard peers on a MikroTik Route
 - **Pagination** — Configurable page size (0 to disable)
 - **i18n** — Italian/English
 - **Startup Validation** — Misconfiguration shows a user-friendly error page
+- **About Popup** — Header `?` button showing the app version and this README, rendered locally in the dashboard
 - **Docker & Helm** — Run as a container via Docker Compose or deploy on Kubernetes with the Helm chart (see [Deployment](#deployment))
 
 ## Requirements
@@ -73,7 +74,6 @@ See `configs/config.php.dist` for a template with all available options:
 | `refresh_interval` | Dashboard auto-refresh interval in seconds (default: `30`) |
 | `handshake_timeout` | Minutes before a peer is shown as offline (default: `5`) |
 | `page_size` | Peers per page (default: `50`). Set to `0` to disable pagination |
-
 | `show_dnat_column` | Show DNAT Port column in peers table (default: `false`) |
 | `show_traffic_column` | Show Traffic column with RX/TX data (default: `true`) |
 | `dnat_base` | Base port for the DNAT formula (default: `30000`) |
@@ -139,11 +139,12 @@ Winbox connection: `CHR_IP:30024`
 - **Private keys are never stored** on the server after the modal is closed
 - **IP restriction via `.htaccess`** — see `.htaccess.example` for setup instructions
 - **Dotfiles blocked** — `.admin-hash` and `.api-token` must never be served: apply the `<FilesMatch "^\."> Require all denied</FilesMatch>` block from `.htaccess.example` to your live `.htaccess`
+- **Secret file permissions** — `.admin-hash` and `.api-token` should be owner-only (`chmod 600`). `setup.php` writes the hash with `0600` automatically; for files created manually, set the permissions yourself (see [API.md](API.md))
 - **Public API token** — `.api-token` (gitignored), sent as `Authorization: Bearer <token>`, validated with `hash_equals()`; rotate immediately if leaked (see [API.md](API.md))
 - **Dashboard authentication** — PHP session login, mandatory. To set it up:
   - Visit `setup.php` in your browser, enter a password once
   - The password hash is stored in `.admin-hash` (gitignored)
-  - Alternative: `php -r "echo password_hash('your_pass', PASSWORD_BCRYPT);" > .admin-hash`
+  - Alternative: `php -r "echo password_hash('your_pass', PASSWORD_BCRYPT);" > .admin-hash && chmod 600 .admin-hash`
   - Until a password is set, every page redirects to `setup.php`
   - After setup, all pages (`index.php`, `api.php`) require login; unauthenticated API calls return `401 Unauthorized`
   - Session timeout: 30 minutes of inactivity

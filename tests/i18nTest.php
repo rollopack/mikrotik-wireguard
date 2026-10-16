@@ -43,14 +43,6 @@ class i18nTest extends TestCase {
         $this->assertEquals('My Default', t($lang, 'nonexistent_key', 'My Default'));
     }
 
-    public function testTEchoesTranslation(): void {
-        $lang = loadLanguage('en');
-        ob_start();
-        t_e($lang, 'stats.total_peers');
-        $output = ob_get_clean();
-        $this->assertEquals('Total Peers', $output);
-    }
-
     public function testJsTranslationsOnlyReturnsJsKeys(): void {
         $lang = loadLanguage('en');
         $js = jsTranslations($lang);
@@ -82,5 +74,25 @@ class i18nTest extends TestCase {
     public function testTWithItalianMissingKeyFallsBack(): void {
         $lang = loadLanguage('it');
         $this->assertEquals('nonexistent_key', t($lang, 'nonexistent_key'));
+    }
+
+    public function testLanguageFilesHaveNoDuplicateKeys(): void {
+        foreach (['en', 'it'] as $code) {
+            $source = file_get_contents(__DIR__ . '/../src/lang/' . $code . '.php');
+            preg_match_all("/^\s*'([^']+)'\s*=>/m", $source, $matches);
+            $duplicates = array_keys(array_filter(
+                array_count_values($matches[1]),
+                static fn(int $count): bool => $count > 1
+            ));
+            $this->assertEquals([], $duplicates, "Duplicate translation keys in $code.php");
+        }
+    }
+
+    public function testEnglishAndItalianHaveSameKeys(): void {
+        $en = array_keys(require __DIR__ . '/../src/lang/en.php');
+        $it = array_keys(require __DIR__ . '/../src/lang/it.php');
+        sort($en);
+        sort($it);
+        $this->assertEquals($en, $it, 'EN and IT language files must expose the same keys');
     }
 }

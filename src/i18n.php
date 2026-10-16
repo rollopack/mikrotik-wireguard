@@ -12,10 +12,6 @@ function t(array $lang, string $key, string $default = ''): string {
     return $lang[$key] ?? ($default ?: $key);
 }
 
-function t_e(array $lang, string $key, string $default = ''): void {
-    echo t($lang, $key, $default);
-}
-
 function jsTranslations(array $lang): array {
     $js = [];
     foreach ($lang as $key => $value) {
