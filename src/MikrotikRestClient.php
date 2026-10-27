@@ -3,6 +3,15 @@
 require_once __DIR__ . '/ClientInterface.php';
 
 class MikrotikRestClient implements ClientInterface {
+    /** Fields the dashboard needs from every peer (RouterOS `.proplist`). */
+    private const PEER_FIELDS = [
+        '.id', 'name', 'interface', 'allowed-address', 'last-handshake',
+        'current-endpoint-address', 'public-key', 'disabled', 'rx', 'tx',
+    ];
+
+    /** Fields needed for IP allocation across interfaces. */
+    private const ALLOCATION_FIELDS = ['.id', 'name', 'allowed-address', 'interface', 'public-key'];
+
     private string $baseUrl;
     private string $username;
     private string $password;
@@ -51,11 +60,12 @@ class MikrotikRestClient implements ClientInterface {
      * @param string $method HTTP method (GET, POST, PATCH, PUT, DELETE)
      * @param string $path API endpoint path (e.g., '/interface/wireguard/peers')
      * @param array|null $data Payload data to send in the body.
+     * @param array $query Query string parameters (e.g. ['.proplist' => '.id,name']).
      * @return array Decoded JSON response.
      * @throws Exception on connection failure or API error response.
      */
-    public function request(string $method, string $path, ?array $data = null): array {
-        $url = $this->baseUrl . '/' . ltrim($path, '/');
+    public function request(string $method, string $path, ?array $data = null, array $query = []): array {
+        $url = $this->buildUrl($path, $query);
         $method = strtoupper($method);
         
         $headers = [
@@ -124,6 +134,47 @@ class MikrotikRestClient implements ClientInterface {
     }
 
     /**
+     * Build the request URL, appending query string parameters when given.
+     *
+     * RouterOS REST reads query parameters as `print` arguments/filters, so
+     * `.proplist` avoids transferring every peer field. Parameter names are
+     * kept literal (they are ASCII identifiers such as `.proplist`) while
+     * values are percent-encoded (`.id,name` becomes `.id%2Cname`).
+     */
+    protected function buildUrl(string $path, array $query = []): string {
+        $url = $this->baseUrl . '/' . ltrim($path, '/');
+        if ($query === []) {
+            return $url;
+        }
+
+        $pairs = [];
+        foreach ($query as $key => $value) {
+            $pairs[] = $key . '=' . rawurlencode((string)$value);
+        }
+
+        return $url . '?' . implode('&', $pairs);
+    }
+
+    /**
+     * Fetch the peer table asking only for the given fields.
+     *
+     * A RouterOS build that does not understand a query parameter treats it as
+     * a filter and answers with an empty list, which would look like an empty
+     * peer table. Retry once without parameters in that case.
+     */
+    private function requestPeerList(array $fields, array $filters = []): array {
+        $query = array_merge(['.proplist' => implode(',', $fields)], $filters);
+        $peers = $this->request('GET', '/interface/wireguard/peers', null, $query);
+
+        if ($peers === []) {
+            error_log('RouterOS REST: peer query returned no peers, retrying without query parameters');
+            $peers = $this->request('GET', '/interface/wireguard/peers');
+        }
+
+        return $peers;
+    }
+
+    /**
      * Get all WireGuard peers with full data including last-handshake.
      * Filters by configured interface and formats output for frontend.
      *
@@ -132,7 +183,7 @@ class MikrotikRestClient implements ClientInterface {
      */
     public function getPeers(): array
     {
-        $peers = $this->request('GET', '/interface/wireguard/peers');
+        $peers = $this->requestPeerList(self::PEER_FIELDS, ['interface' => $this->getInterface()]);
         $interface = $this->getInterface();
 
         // Only extract fields needed by the frontend to reduce payload size
@@ -171,9 +222,9 @@ class MikrotikRestClient implements ClientInterface {
      */
     public function getAllPeers(): array
     {
-        $peers = $this->request('GET', '/interface/wireguard/peers');
-        
-        $allowedFields = ['.id', 'name', 'allowed-address', 'interface', 'public-key'];
+        $peers = $this->requestPeerList(self::ALLOCATION_FIELDS);
+
+        $allowedFields = self::ALLOCATION_FIELDS;
         
         $result = [];
         foreach ($peers as $peer) {
@@ -214,6 +265,23 @@ class MikrotikRestClient implements ClientInterface {
     public function getInterface(): string
     {
         return $this->interface ?? 'WireGuard-ResNovae';
+    }
+
+    /**
+     * Get the peer list and the interface status in one dashboard payload.
+     *
+     * REST has no combined endpoint, so this still costs two GETs; the second
+     * one answers in tens of milliseconds because it returns a single object.
+     *
+     * @return array{peers: array, interface: array}
+     * @throws Exception on failure.
+     */
+    public function getPeersAndInterface(): array
+    {
+        return [
+            'peers' => $this->getPeers(),
+            'interface' => $this->getInterfaceStatus(),
+        ];
     }
 
     /**

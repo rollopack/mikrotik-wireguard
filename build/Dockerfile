@@ -26,7 +26,7 @@ RUN set -eux; \
     php -l /var/www/html/src/WireGuardManager.php; \
     php -r 'require "/var/www/html/src/WireGuardManager.php"; $s=WireGuardManager::generateConfig("10.0.0.2", "private", "public", "vpn.example:51820", "10.0.0.0/24", "1.1.1.1, 1.0.0.1"); if (strpos($s, "DNS = 1.1.1.1, 1.0.0.1") === false || strpos($s, "Endpoint = vpn.example:51820") === false) { exit(1); }'; \
     sed -ri 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf; \
-    a2enmod headers setenvif; \
+    a2enmod deflate expires headers setenvif; \
     chmod +x /usr/local/bin/mikrotik-wireguard-entrypoint; \
     mkdir -p /data /var/www/html/configs; \
     chown -R www-data:www-data /var/www/html /data

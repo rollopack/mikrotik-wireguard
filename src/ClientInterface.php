@@ -72,6 +72,18 @@ interface ClientInterface
     public function getInterfaceStatus(): array;
 
     /**
+     * Get the peer list and the interface status together.
+     *
+     * Lets the dashboard payload be built with a single backend round trip:
+     * native mode uses one Python bridge process (the bridge already reads the
+     * interface while listing peers), REST issues the requests it needs.
+     *
+     * @return array{peers: array, interface: array}
+     * @throws Exception on failure.
+     */
+    public function getPeersAndInterface(): array;
+
+    /**
      * Get PPP secrets (for SSTP/PPTP export).
      *
      * @return array List of PPP secrets

@@ -7,7 +7,6 @@ return [
     'site.description'       => 'Gestore web per peer WireGuard su MikroTik RouterOS 7.',
 
     // ── Banners ────────────────────────────────────────────────
-    'banner.api_error'       => 'Errore di connessione API: <strong>%s</strong>.',
 
     // ── Header ─────────────────────────────────────────────────
     'header.title'           => 'WireGuard Peer Manager',
@@ -172,6 +171,7 @@ return [
     'js.hide_offline'         => 'Nascondi offline',
     'js.show_all'             => 'Mostra tutti',
     'js.load_error'           => 'Errore nel caricamento dei dati: %s',
+    'js.api_error'            => 'Impossibile caricare i peer dal router MikroTik: %s',
     'js.connection_error'     => 'Errore di connessione al server backend.',
     'js.endpoint_na'          => 'Non Connesso',
     'js.unnamed'              => 'Senza Nome',
@@ -193,6 +193,7 @@ return [
     'js.qrcode_title'         => 'QR code della configurazione client WireGuard',
     'js.qrcode_alt'           => 'QR code contenente la configurazione client WireGuard',
     'js.qrcode_error'         => 'Impossibile generare il QR code.',
+    'js.modal_load_error'     => 'Impossibile aprire la finestra. Riprova.',
     'js.config_updated'       => 'Configurazione Aggiornata',
     'js.pagination_info'      => 'Pagina %d di %d (%d totali)',
     'js.empty_title'          => 'Nessun peer trovato',

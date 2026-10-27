@@ -43,6 +43,9 @@ let hideOffline = localStorage.getItem('hideOffline') !== 'false';
 let searchQuery = localStorage.getItem('searchQuery') || '';
 let highlightId = null;
 let pendingHighlightId = null;
+// Tracks whether the open "add peer" dialog actually created a peer, so
+// closing it after a cancellation does not reload the table.
+let addPeerCreated = false;
 let currentPage = 1;
 let currentTotalPages = 1;
 let lastFocusedElement = null;
@@ -65,14 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('searchInput').addEventListener('input', () => { currentPage = 1; applyFiltersAndSort(); });
     document.getElementById('hideOfflineBtn').addEventListener('click', toggleHideOffline);
     document.getElementById('serverSelector').addEventListener('change', (e) => switchServer(e.target.value));
-    document.getElementById('addPeerForm').addEventListener('submit', submitAddPeer);
-    document.getElementById('editPeerForm').addEventListener('submit', submitEditPeer);
     document.addEventListener('click', handleDelegateClick);
     document.addEventListener('keydown', handleDelegateKeydown);
+    document.addEventListener('submit', handleDelegateSubmit);
 
-    // Auto-refresh (pause when modals are open)
+    // Auto-refresh (pause when modals are open or the tab is in the background)
     setInterval(() => {
-        if (!document.querySelector('.modal-backdrop.active')) refreshPeers();
+        if (document.hidden) return;
+        if (document.querySelector('.modal-backdrop.active')) return;
+        refreshPeers();
     }, AppConfig.refreshInterval);
 });
 
@@ -82,7 +86,7 @@ function handleDelegateClick(e) {
     const action = el.dataset.action;
     switch (action) {
         case 'open-add': openAddModal(); break;
-        case 'open-about': openModal('aboutModalBackdrop'); break;
+        case 'open-about': openAboutModal(); break;
         case 'open-export-vpn': openExportVpnIpsModal(); break;
         case 'sort': sortPeers(el.dataset.sort); break;
         case 'prev-page': goToPage(currentPage - 1); break;
@@ -95,7 +99,7 @@ function handleDelegateClick(e) {
         case 'copy-ip': copyIp(el.dataset.value); break;
         case 'copy-dnat': copyDnatPort(el.dataset.value); break;
         case 'export-peer': openExportModal(el.dataset.id, el.dataset.name, el.dataset.ip); break;
-        case 'toggle-peer': togglePeer(el.dataset.id, el.dataset.disabled === 'true'); break;
+        case 'toggle-peer': togglePeer(el.dataset.id, el.dataset.disabled === 'true', el); break;
         case 'edit-peer': openEditModal(el.dataset.id, el.dataset.name); break;
         case 'delete-peer': openDeleteModal(el.dataset.id, el.dataset.name); break;
         case 'confirm-delete': submitDeletePeer(peerToDeleteId); break;
@@ -126,21 +130,17 @@ function handleDelegateKeydown(e) {
     }
 }
 
+// Modal forms are injected on demand, so their submit events are delegated.
+function handleDelegateSubmit(e) {
+    if (e.target.id === 'addPeerForm') submitAddPeer(e);
+    else if (e.target.id === 'editPeerForm') submitEditPeer(e);
+}
+
 /* ── Data Loading ───────────────────────────────────────────── */
-// Seed the table from the peers already fetched by the server-side
-// connection test, avoiding a duplicate get_peers round-trip on first load.
-// When $initialPeers was null (connection failure) the API is queried instead.
+// The peer list is not embedded in the page: index.php renders instantly and
+// the table is filled from a single get_peers call (peers + interface status).
 function initPeers() {
-    if (Array.isArray(AppConfig.initialPeers)) {
-        allPeers = AppConfig.initialPeers;
-        currentPage = 1;
-        applyFiltersAndSort();
-        highlightPendingPeer();
-        fetchInterfaceStatus();
-        updateSortIcons();
-    } else {
-        loadPeers().then(() => updateSortIcons());
-    }
+    loadPeers().then(() => updateSortIcons());
 }
 
 async function loadPeers() {
@@ -150,15 +150,16 @@ async function loadPeers() {
         const res = await fetch(apiUrl('get_peers'));
         const data = await res.json();
         if (data.success) {
-            allPeers = data.peers;
             currentPage = 1;
-            applyFiltersAndSort();
+            // Resolve the pending highlight first: the render below paints it.
             highlightPendingPeer();
-            fetchInterfaceStatus();
+            applyDashboardData(data);
         } else {
+            showConnectionError(data.error || t('js.connection_error'));
             showToast(t('js.load_error').replace('%s', data.error), true);
         }
     } catch {
+        showConnectionError(t('js.connection_error'));
         showToast(t('js.connection_error'), true);
     } finally {
         loader.classList.remove('active');
@@ -171,13 +172,19 @@ async function refreshPeers() {
         const res = await fetch(apiUrl('get_peers'));
         const data = await res.json();
         if (data.success) {
-            allPeers = data.peers;
-            applyFiltersAndSort();
-            fetchInterfaceStatus();
+            applyDashboardData(data);
         }
     } catch {
         // silently ignore errors on auto-refresh
     }
+}
+
+// Single entry point for a get_peers payload: peers + interface status.
+function applyDashboardData(data) {
+    allPeers = data.peers || [];
+    clearConnectionError();
+    if (data.interface) updateInterfaceStatusUI(data.interface);
+    applyFiltersAndSort();
 }
 
 function highlightPendingPeer() {
@@ -187,19 +194,36 @@ function highlightPendingPeer() {
     }
 }
 
-/* ── Interface Status ─────────────────────────────────────────── */
-async function fetchInterfaceStatus() {
-    try {
-        const res = await fetch(apiUrl('get_interface_status'));
-        const data = await res.json();
-        if (data.success && data.interface) {
-            updateInterfaceStatusUI(data.interface);
-        }
-    } catch {
-        // silently ignore
-    }
+/* ── Connection banner / status dot ─────────────────────────── */
+function showConnectionError(message) {
+    const banner = document.getElementById('errorBanner');
+    const text = document.getElementById('errorBannerText');
+    setStatusDot('error');
+    if (!banner || !text) return;
+
+    const parts = t('js.api_error').split('%s');
+    const strong = document.createElement('strong');
+    strong.textContent = message;
+    text.replaceChildren(
+        document.createTextNode(parts[0] || ''),
+        strong,
+        document.createTextNode(parts[1] || '')
+    );
+    banner.hidden = false;
 }
 
+function clearConnectionError() {
+    const banner = document.getElementById('errorBanner');
+    if (banner) banner.hidden = true;
+    setStatusDot('active');
+}
+
+function setStatusDot(state) {
+    const dot = document.getElementById('statusDot');
+    if (dot) dot.className = 'status-dot ' + state;
+}
+
+/* ── Interface Status ─────────────────────────────────────────── */
 function updateInterfaceStatusUI(iface) {
     const label = document.getElementById('wgInterfaceLabel');
     if (!label) return;
@@ -344,12 +368,40 @@ function updateSortIcons() {
 }
 
 /* ── Render ─────────────────────────────────────────────────── */
+// Static row fragments, hoisted so a 300-row table does not rebuild them for
+// every peer on every refresh.
+const ROW_ICONS = {
+    download: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>',
+    enable: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/></svg>',
+    disable: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9A2.25 2.25 0 0 1 5.25 16.5v-9Z"/></svg>',
+    edit: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>',
+    remove: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>'
+};
+
+// Identifies "what the table currently shows" so an auto-refresh that returns
+// identical data does not touch the DOM at all.
+let lastRenderSignature = null;
+
+function peerRenderSignature(pagePeers, totalPages) {
+    const rows = pagePeers.map(p => [
+        p['.id'], p.name, p['allowed-address'], p['handshake_formatted'],
+        p['current-endpoint-address'], p.disabled, p.rx_formatted, p.tx_formatted
+    ].join('\u0001')).join('\u0002');
+
+    return [
+        PAGE_SIZE, currentPage, totalPages,
+        AppConfig.showDnatColumn, AppConfig.showTrafficColumn,
+        rows
+    ].join('\u0003');
+}
+
 function renderPeers(peers) {
     const tbody = document.getElementById('peersTableBody');
     const emptyState = document.getElementById('emptyState');
-    tbody.innerHTML = '';
 
     if (peers.length === 0) {
+        tbody.innerHTML = '';
+        lastRenderSignature = null;
         const emptyTitle = document.getElementById('emptyStateTitle');
         const emptyDesc = document.getElementById('emptyStateDesc');
         if (allPeers.length > 0) {
@@ -377,68 +429,103 @@ function renderPeers(peers) {
     // Count active from full list for accurate stats
     peers.forEach(p => { if (isPeerActive(p)) activeCount++; });
 
-    pagePeers.forEach(peer => {
-        const handshake = peer['handshake_formatted'] || 'never';
-        let isActive = isPeerActive(peer);
+    document.getElementById('stat-active-peers').innerText = activeCount;
+    renderPagination(currentPage, totalPages, peers.length);
 
-        const endpoint = peer['current-endpoint-address'] || t('js.endpoint_na');
+    const signature = peerRenderSignature(pagePeers, totalPages);
+    // A pending highlight needs the rows to be (re)painted so it can be applied.
+    if (signature === lastRenderSignature && !highlightId) return;
+    lastRenderSignature = signature;
+
+    // Hoist translations and settings out of the loop: they are constant for
+    // the whole render pass.
+    const labels = {
+        name: t('js.col_name'),
+        ip: t('js.col_ip'),
+        dnat: t('js.col_dnat_port'),
+        handshake: t('js.col_handshake'),
+        endpoint: t('js.col_endpoint'),
+        traffic: t('js.col_traffic'),
+        actions: t('js.col_actions')
+    };
+    const titles = {
+        copyName: t('js.copy_name_title'),
+        copyIp: t('js.copy_ip_title'),
+        copyPort: t('js.copy_port_title'),
+        download: t('js.download_title'),
+        enable: t('js.toggle_enable_title'),
+        disable: t('js.toggle_disable_title'),
+        edit: t('js.edit_title'),
+        delete: t('js.delete_title')
+    };
+    const disabledBadge = t('js.disabled_badge');
+    const endpointNa = t('js.endpoint_na');
+    const unnamed = t('js.unnamed');
+    const showDnat = AppConfig.showDnatColumn;
+    const showTraffic = AppConfig.showTrafficColumn;
+
+    const rows = pagePeers.map(peer => {
+        const handshake = peer['handshake_formatted'] || 'never';
+        const isActive = isPeerActive(peer);
+        const hasEndpoint = Boolean(peer['current-endpoint-address']);
+        const endpoint = hasEndpoint ? peer['current-endpoint-address'] : endpointNa;
+        const endpointColor = hasEndpoint ? 'var(--text-color)' : 'var(--text-muted)';
         const ip = (peer['allowed-address'] || '').split('/')[0];
-        const peerName = peer.name || t('js.unnamed');
+        const peerName = peer.name || unnamed;
         const peerId = peer['.id'] || '';
         const allowedAddress = peer['allowed-address'] || '';
+        const toggleTitle = peer.disabled ? titles.enable : titles.disable;
+        const toggleIcon = peer.disabled ? ROW_ICONS.enable : ROW_ICONS.disable;
 
-        const tr = document.createElement('tr');
-        tr.setAttribute('data-peer-ip', ip);
-        if (peer.disabled) tr.classList.add('row-disabled');
-        tr.innerHTML = `
-            <td data-label="${t('js.col_name')}">
-                <button type="button" class="peer-name btn-copy" data-action="copy-name" data-value="${escapeHtml(peerName)}" title="${t('js.copy_name_title')}" aria-label="${t('js.copy_name_title')}">${escapeHtml(peerName)}</button>
-                ${peer.disabled ? `<span class="badge-disabled">${t('js.disabled_badge')}</span>` : ''}
+        return `<tr data-peer-ip="${escapeHtml(ip)}"${peer.disabled ? ' class="row-disabled"' : ''}>
+            <td data-label="${labels.name}">
+                <button type="button" class="peer-name btn-copy" data-action="copy-name" data-value="${escapeHtml(peerName)}" title="${titles.copyName}" aria-label="${titles.copyName}">${escapeHtml(peerName)}</button>
+                ${peer.disabled ? `<span class="badge-disabled">${disabledBadge}</span>` : ''}
             </td>
-            <td data-label="${t('js.col_ip')}">
-                <button type="button" class="peer-ip-badge btn-copy" data-action="copy-ip" data-value="${escapeHtml(ip)}" title="${t('js.copy_ip_title')}" aria-label="${t('js.copy_ip_title')}">${escapeHtml(ip)}</button>
+            <td data-label="${labels.ip}">
+                <button type="button" class="peer-ip-badge btn-copy" data-action="copy-ip" data-value="${escapeHtml(ip)}" title="${titles.copyIp}" aria-label="${titles.copyIp}">${escapeHtml(ip)}</button>
             </td>
-            ${AppConfig.showDnatColumn ? `<td data-label="${t('js.col_dnat_port')}">
-                <button type="button" class="peer-ip-badge btn-copy" data-action="copy-dnat" data-value="${escapeHtml(ip)}" title="${t('js.copy_port_title')}" aria-label="${t('js.copy_port_title')}">${dnatPort(ip)}</button>
+            ${showDnat ? `<td data-label="${labels.dnat}">
+                <button type="button" class="peer-ip-badge btn-copy" data-action="copy-dnat" data-value="${escapeHtml(ip)}" title="${titles.copyPort}" aria-label="${titles.copyPort}">${dnatPort(ip)}</button>
             </td>` : ''}
-            <td data-label="${t('js.col_handshake')}">
+            <td data-label="${labels.handshake}">
                 <div class="handshake-cell">
                     <span class="handshake-pulse ${isActive ? 'active' : ''}"></span>
                     <span class="handshake-dot-inactive"></span>
                     <span>${escapeHtml(handshake)}</span>
                 </div>
             </td>
-            <td data-label="${t('js.col_endpoint')}">
-                <span style="font-family:monospace;color:${peer['current-endpoint-address'] ? 'var(--text-color)' : 'var(--text-muted)'};">
+            <td data-label="${labels.endpoint}">
+                <span style="font-family:monospace;color:${endpointColor};">
                     ${escapeHtml(endpoint)}
                 </span>
             </td>
-            ${AppConfig.showTrafficColumn ? `<td data-label="${t('js.col_traffic')}">
+            ${showTraffic ? `<td data-label="${labels.traffic}">
                 <div class="traffic-info">
                     <span class="traffic-val">↓ ${escapeHtml(peer.rx_formatted)}</span>
                     <span class="traffic-val">↑ ${escapeHtml(peer.tx_formatted)}</span>
                 </div>
             </td>` : ''}
-            <td data-label="${t('js.col_actions')}" class="text-right">
+            <td data-label="${labels.actions}" class="text-right">
                 <div class="actions-cell">
-                    <button class="icon-btn" data-action="export-peer" data-id="${escapeHtml(peerId)}" data-name="${escapeHtml(peerName)}" data-ip="${escapeHtml(allowedAddress)}" title="${t('js.download_title')}" aria-label="${t('js.download_title')}">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                    <button class="icon-btn" data-action="export-peer" data-id="${escapeHtml(peerId)}" data-name="${escapeHtml(peerName)}" data-ip="${escapeHtml(allowedAddress)}" title="${titles.download}" aria-label="${titles.download}">
+                        ${ROW_ICONS.download}
                     </button>
-                    <button class="icon-btn ${peer.disabled ? '' : 'icon-btn-toggle-on'}" data-action="toggle-peer" data-id="${escapeHtml(peerId)}" data-disabled="${peer.disabled}" title="${peer.disabled ? t('js.toggle_enable_title') : t('js.toggle_disable_title')}" aria-label="${peer.disabled ? t('js.toggle_enable_title') : t('js.toggle_disable_title')}">
-                        ${peer.disabled
-                ? '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"/></svg>'
-                : '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25h-9A2.25 2.25 0 0 1 5.25 16.5v-9Z"/></svg>'}
+                    <button class="icon-btn ${peer.disabled ? '' : 'icon-btn-toggle-on'}" data-action="toggle-peer" data-id="${escapeHtml(peerId)}" data-disabled="${peer.disabled}" title="${toggleTitle}" aria-label="${toggleTitle}">
+                        ${toggleIcon}
                     </button>
-                    <button class="icon-btn" data-action="edit-peer" data-id="${escapeHtml(peerId)}" data-name="${escapeHtml(peerName)}" title="${t('js.edit_title')}" aria-label="${t('js.edit_title')}">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>
+                    <button class="icon-btn" data-action="edit-peer" data-id="${escapeHtml(peerId)}" data-name="${escapeHtml(peerName)}" title="${titles.edit}" aria-label="${titles.edit}">
+                        ${ROW_ICONS.edit}
                     </button>
-                    <button class="icon-btn icon-btn-danger" data-action="delete-peer" data-id="${escapeHtml(peerId)}" data-name="${escapeHtml(peerName)}" title="${t('js.delete_title')}" aria-label="${t('js.delete_title')}">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+                    <button class="icon-btn icon-btn-danger" data-action="delete-peer" data-id="${escapeHtml(peerId)}" data-name="${escapeHtml(peerName)}" title="${titles.delete}" aria-label="${titles.delete}">
+                        ${ROW_ICONS.remove}
                     </button>
                 </div>
-            </td>`;
-        tbody.appendChild(tr);
-    });
+            </td>
+        </tr>`;
+    }).join('');
+
+    tbody.innerHTML = rows;
 
     if (highlightId) {
         const targetRow = tbody.querySelector(`tr[data-peer-ip="${highlightId}"]`);
@@ -455,9 +542,6 @@ function renderPeers(peers) {
             highlightId = null;
         }
     }
-
-    document.getElementById('stat-active-peers').innerText = activeCount;
-    renderPagination(currentPage, totalPages, peers.length);
 }
 
 function renderPagination(page, totalPages, totalPeers) {
@@ -567,6 +651,11 @@ function closeAboutModal() {
     closeModal('aboutModalBackdrop');
 }
 
+async function openAboutModal() {
+    if (!(await ensureModalWithSession('about'))) return;
+    openModal('aboutModalBackdrop');
+}
+
 const CLOSE_HANDLERS = {
     'addModalBackdrop': closeAddModal,
     'editModalBackdrop': closeEditModal,
@@ -582,11 +671,75 @@ function closeModalById(id) {
     if (fn) fn();
 }
 
+/* ── On-demand modal fragments ──────────────────────────────── */
+// index.php no longer contains the modal markup: each fragment is fetched
+// from src/modal.php the first time it is opened and then reused.
+const MODAL_BACKDROPS = {
+    add: 'addModalBackdrop',
+    edit: 'editModalBackdrop',
+    delete: 'deleteModalBackdrop',
+    confirm: 'confirmModalBackdrop',
+    export: 'exportModalBackdrop',
+    'export-vpn-ips': 'exportVpnIpsModalBackdrop',
+    about: 'aboutModalBackdrop'
+};
+
+const loadedModals = new Set();
+const modalLoads = new Map();
+
+async function loadModal(type) {
+    const backdropId = MODAL_BACKDROPS[type];
+    if (!backdropId) throw new Error('Unknown modal type: ' + type);
+    if (loadedModals.has(type)) return document.getElementById(backdropId);
+    if (modalLoads.has(type)) return modalLoads.get(type);
+
+    const request = (async () => {
+        const url = 'src/modal.php?type=' + encodeURIComponent(type) +
+            '&server=' + encodeURIComponent(AppConfig.serverKey);
+        const res = await fetch(url, { headers: { Accept: 'text/html' } });
+        if (res.status === 401) {
+            window.location.href = 'login.php';
+            return null;
+        }
+        if (!res.ok) throw new Error('Modal fragment request failed: ' + res.status);
+
+        document.getElementById('modalHost').insertAdjacentHTML('beforeend', await res.text());
+        loadedModals.add(type);
+        return document.getElementById(backdropId);
+    })();
+    modalLoads.set(type, request);
+
+    try {
+        return await request;
+    } finally {
+        modalLoads.delete(type);
+    }
+}
+
+// Fetch a fragment, reporting failures instead of silently doing nothing.
+async function ensureModal(type) {
+    try {
+        return await loadModal(type);
+    } catch {
+        showToast(t('js.modal_load_error'), true);
+        return null;
+    }
+}
+
+// A first-time fragment request authenticates in modal.php. Reused fragments
+// need a lightweight session check because they no longer make that request.
+async function ensureModalWithSession(type) {
+    if (loadedModals.has(type) && !(await checkSession())) return null;
+    return ensureModal(type);
+}
+
 /* ── Add Peer Modal ─────────────────────────────────────────── */
 async function openAddModal() {
-    if (!(await checkSession())) return;
+    if (!(await ensureModalWithSession('add'))) return;
     pendingHighlightId = null;
     highlightId = null;
+    // Reset on every open: a cancelled dialog must not reload the table.
+    addPeerCreated = false;
     document.getElementById('modalFormContent').style.display = 'block';
     document.getElementById('modalResultContent').style.display = 'none';
     document.getElementById('modalFooterActions').style.display = 'flex';
@@ -603,7 +756,13 @@ async function openAddModal() {
 function closeAddModal() {
     clearQrCode('addQrCode');
     closeModal('addModalBackdrop');
-    loadPeers();
+
+    // Only a successful creation changes the list. Cancelling (X or the
+    // "Cancel" button) must not trigger a redundant get_peers round trip.
+    if (addPeerCreated) {
+        addPeerCreated = false;
+        loadPeers();
+    }
 }
 
 async function submitAddPeer(event) {
@@ -618,7 +777,8 @@ async function submitAddPeer(event) {
     if (data.success) {
         showToast(t('js.peer_created'));
         pendingHighlightId = data.peer.ip;
-        displayAddResult(data.peer);
+        addPeerCreated = true;
+        await displayAddResult(data.peer);
     } else {
         showToast(t('js.create_error').replace('%s', data.error), true);
         submitBtn.innerText = orig;
@@ -626,7 +786,7 @@ async function submitAddPeer(event) {
     }
 }
 
-function displayAddResult(peer) {
+async function displayAddResult(peer) {
     document.getElementById('modalFormContent').style.display = 'none';
     document.getElementById('modalFooterActions').style.display = 'none';
     document.getElementById('modalResultContent').style.display = 'block';
@@ -635,7 +795,7 @@ function displayAddResult(peer) {
     document.getElementById('code-conf-text').innerText = peer.config;
     document.getElementById('code-script-text').innerText = peer.script;
     document.getElementById('addQrTab').disabled = false;
-    renderQrCode('addQrCode', peer.config);
+    await renderQrCode('addQrCode', peer.config);
 
     setupDownload(document.getElementById('btnDownloadConf'), `${peer.name}.conf`, peer.config);
     setupDownload(document.getElementById('btnDownloadScript'), `${peer.name}.rsc`, peer.script);
@@ -664,9 +824,42 @@ function switchAddTab(tab) {
     }
 }
 
-function renderQrCode(containerId, configText) {
+/* ── QR encoder (loaded on demand) ──────────────────────────── */
+// The library is only needed once a configuration is actually displayed, so
+// it is kept off the initial page weight.
+const QR_LIBRARY_URL = 'assets/js/qrcode-generator.min.js';
+let qrLibraryPromise = null;
+
+function loadQrLibrary() {
+    if (typeof qrcode === 'function') return Promise.resolve();
+    if (qrLibraryPromise) return qrLibraryPromise;
+
+    qrLibraryPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = QR_LIBRARY_URL + (AppConfig.assetVersion ? '?v=' + encodeURIComponent(AppConfig.assetVersion) : '');
+        script.onload = () => resolve();
+        script.onerror = () => {
+            qrLibraryPromise = null;
+            reject(new Error('QR library failed to load'));
+        };
+        document.head.appendChild(script);
+    });
+
+    return qrLibraryPromise;
+}
+
+async function renderQrCode(containerId, configText) {
     const container = document.getElementById(containerId);
     if (!container) return;
+
+    if (configText) {
+        try {
+            await loadQrLibrary();
+        } catch {
+            // handled by the guard below
+        }
+    }
+
     if (!configText || typeof qrcode !== 'function') {
         container.textContent = t('js.qrcode_error');
         container.setAttribute('role', 'alert');
@@ -717,7 +910,7 @@ function setupDownload(el, filename, content) {
 
 /* ── Edit Peer Modal ────────────────────────────────────────── */
 async function openEditModal(id, name) {
-    if (!(await checkSession())) return;
+    if (!(await ensureModalWithSession('edit'))) return;
     pendingHighlightId = null;
     highlightId = null;
     document.getElementById('editPeerId').value = id;
@@ -748,7 +941,7 @@ async function submitEditPeer(event) {
 
 /* ── Delete Peer Modal ──────────────────────────────────────── */
 async function openDeleteModal(id, name) {
-    if (!(await checkSession())) return;
+    if (!(await ensureModalWithSession('delete'))) return;
     peerToDeleteId = id;
     document.getElementById('deletePeerNameText').innerText = name;
     openModal('deleteModalBackdrop');
@@ -762,7 +955,8 @@ function closeDeleteModal() {
 /* ── Confirm Modal ──────────────────────────────────────────── */
 let confirmCallback = null;
 
-function openConfirmModal(message, callback) {
+async function openConfirmModal(message, callback) {
+    if (!(await ensureModalWithSession('confirm'))) return;
     document.getElementById('confirmModalText').innerText = message;
     confirmCallback = callback;
     openModal('confirmModalBackdrop');
@@ -785,24 +979,63 @@ async function submitDeletePeer(id) {
 }
 
 /* ── Toggle Peer (Enable/Disable) ──────────────────────────── */
-async function togglePeer(id, currentlyDisabled) {
-    if (!(await checkSession())) return;
+function setPeerToggleLoading(button, isLoading) {
+    if (!button) return;
+
+    if (isLoading) {
+        if (button.dataset.toggleOriginalHtml === undefined) {
+            button.dataset.toggleOriginalHtml = button.innerHTML;
+        }
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        button.innerHTML = '<span class="spinner spinner-inline" aria-hidden="true"></span>';
+        return;
+    }
+
+    if (button.dataset.toggleOriginalHtml !== undefined) {
+        button.innerHTML = button.dataset.toggleOriginalHtml;
+        delete button.dataset.toggleOriginalHtml;
+    }
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+}
+
+async function togglePeer(id, currentlyDisabled, button) {
     const newDisabled = !currentlyDisabled;
 
+    // Enabling has no confirmation step. Show progress before the session
+    // check, which itself may take a network round trip.
+    if (!newDisabled) {
+        setPeerToggleLoading(button, true);
+        if (!(await checkSession())) {
+            setPeerToggleLoading(button, false);
+            return;
+        }
+    }
+
     const doToggle = async () => {
-        const data = await apiPost('toggle_peer', { id, disabled: newDisabled });
-        if (data.success) {
-            showToast(newDisabled ? t('js.peer_disabled') : t('js.peer_enabled'));
-            loadPeers();
-        } else {
-            showToast(t('js.toggle_error').replace('%s', data.error), true);
+        // For disabling, this runs only after the user confirms the action.
+        setPeerToggleLoading(button, true);
+        try {
+            const data = await apiPost('toggle_peer', { id, disabled: newDisabled });
+            if (data.success) {
+                showToast(newDisabled ? t('js.peer_disabled') : t('js.peer_enabled'));
+                await loadPeers();
+            } else {
+                showToast(t('js.toggle_error').replace('%s', data.error), true);
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            showToast(t('js.toggle_error').replace('%s', message || t('js.connection_error')), true);
+        } finally {
+            setPeerToggleLoading(button, false);
         }
     };
 
     if (newDisabled) {
-        openConfirmModal(t('js.toggle_disable_confirm'), doToggle);
+        await openConfirmModal(t('js.toggle_disable_confirm'), doToggle);
     } else {
-        doToggle();
+        await doToggle();
     }
 }
 
@@ -812,7 +1045,7 @@ let exportPeerName = null;
 let exportPeerIp = null;
 
 async function openExportModal(id, name, allowedAddress) {
-    if (!(await checkSession())) return;
+    if (!(await ensureModalWithSession('export'))) return;
     exportPeerId = id;
     exportPeerName = name;
     exportPeerIp = allowedAddress.split('/')[0];
@@ -835,14 +1068,14 @@ async function openExportModal(id, name, allowedAddress) {
     openModal('exportModalBackdrop');
 }
 
-function updateExportConfig(data) {
+async function updateExportConfig(data) {
     const confContent = data.config || '';
     const scriptContent = data.script || '';
 
     document.getElementById('code-export-conf-text').innerText = confContent;
     document.getElementById('code-export-script-text').innerText = scriptContent;
     document.getElementById('tabBtnExportQr').disabled = false;
-    renderQrCode('exportQrCode', confContent);
+    await renderQrCode('exportQrCode', confContent);
 
     setupDownload(document.getElementById('btnDownloadExportConf'), `${exportPeerName}.conf`, confContent);
     setupDownload(document.getElementById('btnDownloadExportScript'), `${exportPeerName}.rsc`, scriptContent);
@@ -863,7 +1096,7 @@ async function regenerateKey() {
 
         const data = await apiPost('regenerate_key', { id: exportPeerId });
         if (data.success) {
-            updateExportConfig(data);
+            await updateExportConfig(data);
 
             document.getElementById('exportConfigSection').style.display = 'block';
 
@@ -927,7 +1160,7 @@ function copyToClipboard(elementId) {
 
 /* ── Export VPN IPs Modal ──────────────────────────────────── */
 async function openExportVpnIpsModal() {
-    if (!(await checkSession())) return;
+    if (!(await ensureModalWithSession('export-vpn-ips'))) return;
     document.getElementById('exportVpnIpsResult').style.display = 'none';
     document.getElementById('exportVpnIpsFooter').style.display = 'flex';
     document.getElementById('includeSstpCheck').checked = false;

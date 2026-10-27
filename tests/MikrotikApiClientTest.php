@@ -104,6 +104,61 @@ class MikrotikApiClientTest extends TestCase {
         $this->assertEquals('480.30 KiB', $peers[0]['tx_formatted']);
     }
 
+    // ── getPeersAndInterface ───────────────────────────────────────
+
+    public function testGetPeersAndInterfaceUsesASingleBridgeCall(): void {
+        $client = new TestableMikrotikApiClient($this->baseConfig);
+        $client->setMockResponse('get_peers', [
+            'WG-Test' => [
+                'name' => 'WG-Test',
+                'public-key' => 'server_pub_key',
+                'running' => 'true',
+                'disabled' => 'false',
+                'listen-port' => '13231',
+                'mtu' => '1420',
+                'comment' => 'main',
+            ],
+            'Peer1' => [
+                '.id' => '*1',
+                'allowed-address' => '10.0.0.2/32',
+                'last-handshake' => '5s',
+                'public-key' => 'pk1',
+                'rx' => 0,
+                'tx' => 0,
+            ],
+        ]);
+
+        $snapshot = $client->getPeersAndInterface();
+
+        $this->assertCount(1, $client->queryCalls);
+        $this->assertEquals('get_peers', $client->queryCalls[0]['action']);
+        $this->assertCount(1, $snapshot['peers']);
+        $this->assertEquals('Peer1', $snapshot['peers'][0]['name']);
+        $this->assertEquals('WG-Test', $snapshot['interface']['name']);
+        $this->assertTrue($snapshot['interface']['running']);
+        $this->assertFalse($snapshot['interface']['disabled']);
+        $this->assertEquals(13231, $snapshot['interface']['listen-port']);
+        $this->assertEquals('main', $snapshot['interface']['comment']);
+    }
+
+    public function testGetPeersAndInterfaceReturnsNullInterfaceWhenMissing(): void {
+        $client = new TestableMikrotikApiClient($this->baseConfig);
+        $client->setMockResponse('get_peers', [
+            'Peer1' => [
+                '.id' => '*1',
+                'allowed-address' => '10.0.0.2/32',
+                'public-key' => 'pk1',
+                'rx' => 0,
+                'tx' => 0,
+            ],
+        ]);
+
+        $snapshot = $client->getPeersAndInterface();
+
+        $this->assertCount(1, $snapshot['peers']);
+        $this->assertEquals(null, $snapshot['interface']);
+    }
+
     // ── getServerPublicKey ───────────────────────────────────────
 
     public function testGetServerPublicKey(): void {

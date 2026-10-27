@@ -76,6 +76,12 @@ body {
     border-color: rgba(239, 68, 68, .3);
 }
 
+/* The banner is always in the DOM and toggled with the hidden attribute:
+   `display: flex` above would otherwise win over the browser default. */
+.banner[hidden] {
+    display: none;
+}
+
 /* ── Header ────────────────────────────────────────────────── */
 header {
     display: flex;
@@ -687,6 +693,12 @@ tr:hover td {
     border-radius: 50%;
     border-top-color: var(--primary);
     animation: spin 1s linear infinite;
+}
+
+.spinner-inline {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
 }
 
 /* ── Modals ─────────────────────────────────────────────────── */

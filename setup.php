@@ -19,9 +19,11 @@ ini_set('display_errors', 0);
 
 require_once __DIR__ . '/src/auth.php';
 require_once __DIR__ . '/src/i18n.php';
+require_once __DIR__ . '/src/AppInfo.php';
 
 $config = require __DIR__ . '/config.php';
 $lang = loadLanguage($config['lang'] ?? 'en');
+$assetVersion = rawurlencode(AppInfo::assetVersion());
 
 if (isAuthEnabled()) {
     header('Location: login.php');
@@ -30,7 +32,7 @@ if (isAuthEnabled()) {
 
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
-header("Content-Security-Policy: default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'none'; img-src 'self' data:;");
+header("Content-Security-Policy: default-src 'self'; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'none'; img-src 'self' data:;");
 
 $error = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -59,9 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo t($lang, 'auth.setup_title'); ?> — <?php echo t($lang, 'site.title'); ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Self-hosted Outfit webfont: no third-party request on the critical path -->
+    <link rel="preload" href="assets/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="assets/css/fonts.css?v=<?php echo $assetVersion; ?>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {

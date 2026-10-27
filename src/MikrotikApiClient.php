@@ -18,7 +18,26 @@ class MikrotikApiClient implements ClientInterface
 
     public function getPeers(): array
     {
-        return $this->getPeersViaNativeApi([]);
+        return $this->formatPeers($this->queryNativeApi([], 'get_peers'));
+    }
+
+    /**
+     * Peers and interface status from a single bridge process.
+     *
+     * The bridge already reads `/interface/wireguard` while listing peers, so
+     * the dashboard payload costs one Python spawn instead of two.
+     *
+     * @return array{peers: array, interface: array|null}
+     */
+    public function getPeersAndInterface(): array
+    {
+        $nativeData = $this->queryNativeApi([], 'get_peers');
+        $interfaceEntry = $nativeData[$this->getInterface()] ?? null;
+
+        return [
+            'peers' => $this->formatPeers($nativeData),
+            'interface' => is_array($interfaceEntry) ? $this->formatInterfaceStatus($interfaceEntry) : null,
+        ];
     }
     
     public function getAllPeers(): array
@@ -49,18 +68,27 @@ class MikrotikApiClient implements ClientInterface
         $result = $this->queryNativeApi([], 'get_interface');
         $ifaceName = $this->getInterface();
         if (isset($result[$ifaceName])) {
-            $iface = $result[$ifaceName];
-            return [
-                'name' => $iface['name'] ?? $ifaceName,
-                'running' => WireGuardManager::normalizeBool($iface['running'] ?? 'false'),
-                'disabled' => WireGuardManager::normalizeBool($iface['disabled'] ?? 'false'),
-                'listen-port' => (int)($iface['listen-port'] ?? 0),
-                'mtu' => (int)($iface['mtu'] ?? 0),
-                'public-key' => $iface['public-key'] ?? '',
-                'comment' => $iface['comment'] ?? '',
-            ];
+            return $this->formatInterfaceStatus($result[$ifaceName], $ifaceName);
         }
         throw new Exception("WireGuard interface '" . $ifaceName . "' not found on the MikroTik CHR.");
+    }
+
+    /**
+     * Normalize the interface entry returned by the bridge.
+     *
+     * @param array $iface Raw interface data (native API returns yes/no).
+     */
+    private function formatInterfaceStatus(array $iface, ?string $fallbackName = null): array
+    {
+        return [
+            'name' => $iface['name'] ?? $fallbackName ?? $this->getInterface(),
+            'running' => WireGuardManager::normalizeBool($iface['running'] ?? 'false'),
+            'disabled' => WireGuardManager::normalizeBool($iface['disabled'] ?? 'false'),
+            'listen-port' => (int)($iface['listen-port'] ?? 0),
+            'mtu' => (int)($iface['mtu'] ?? 0),
+            'public-key' => $iface['public-key'] ?? '',
+            'comment' => $iface['comment'] ?? '',
+        ];
     }
     
     public function getInterface(): string
@@ -94,14 +122,18 @@ class MikrotikApiClient implements ClientInterface
         return $this->queryNativeApi([], 'get_ppp_active');
     }
     
-    private function getPeersViaNativeApi(array $peerNames = []): array
+    /**
+     * Normalize the bridge peer map into the dashboard peer list.
+     *
+     * The bridge keys the map by peer name and adds one entry for the
+     * WireGuard interface itself, which is skipped here.
+     */
+    private function formatPeers(array $nativeData): array
     {
-        $nativeData = $this->queryNativeApi($peerNames);
-        
         if (empty($nativeData)) {
             return [];
         }
-        
+
         $filteredPeers = [];
         foreach ($nativeData as $name => $data) {
             // Skip the interface entry (public key)

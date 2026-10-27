@@ -45,6 +45,57 @@ class MikrotikRestClientTest extends TestCase {
         $this->assertEquals('WG-Interface', $client->getInterface());
     }
 
+    private function buildUrl(MikrotikRestClient $client, string $path, array $query = []): string {
+        $method = new ReflectionMethod($client, 'buildUrl');
+        return $method->invoke($client, $path, $query);
+    }
+
+    public function testBuildUrlWithoutQueryIsUnchanged(): void {
+        $client = new MikrotikRestClient('192.168.88.1', 'admin', 'pass');
+
+        $this->assertEquals(
+            'https://192.168.88.1/rest/interface/wireguard/peers',
+            $this->buildUrl($client, '/interface/wireguard/peers')
+        );
+    }
+
+    public function testBuildUrlEncodesQueryValuesButKeepsParameterNames(): void {
+        $client = new MikrotikRestClient('192.168.88.1', 'admin', 'pass');
+
+        $this->assertEquals(
+            'https://192.168.88.1/rest/interface/wireguard/peers?.proplist=.id%2Cname%2Cdisabled&interface=wg-users',
+            $this->buildUrl($client, '/interface/wireguard/peers', [
+                '.proplist' => '.id,name,disabled',
+                'interface' => 'wg-users',
+            ])
+        );
+    }
+
+    public function testPeerProjectionCoversEveryFieldTheDashboardRenders(): void {
+        $fields = (new ReflectionClass(MikrotikRestClient::class))->getConstant('PEER_FIELDS');
+
+        foreach (['.id', 'name', 'interface', 'allowed-address', 'last-handshake',
+                  'current-endpoint-address', 'disabled', 'rx', 'tx'] as $field) {
+            $this->assertTrue(in_array($field, $fields, true), "PEER_FIELDS is missing {$field}");
+        }
+    }
+
+    public function testPeersAndInterfaceCombinesBothPayloads(): void {
+        $client = new class('192.168.88.1', 'admin', 'pass') extends MikrotikRestClient {
+            public function getPeers(): array {
+                return [['name' => 'Peer1']];
+            }
+            public function getInterfaceStatus(): array {
+                return ['name' => 'wg-users', 'running' => true];
+            }
+        };
+
+        $snapshot = $client->getPeersAndInterface();
+
+        $this->assertCount(1, $snapshot['peers']);
+        $this->assertEquals('wg-users', $snapshot['interface']['name']);
+    }
+
     public function testRequestThrowsOnNetworkError(): void {
         $client = new MikrotikRestClient('192.0.2.1', 'admin', 'pass', false, 1);
         $threw = false;

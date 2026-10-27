@@ -185,7 +185,8 @@ def main():
                                 'disabled': p.get('disabled', 'no'),
                             }
                 
-                # Also get WireGuard interface public key
+                # Also return the WireGuard interface entry (public key and
+                # status) so the dashboard needs a single bridge process.
                 if interface:
                     iface_query = api.path('/interface/wireguard').select(*iface_fields).where(
                         Key('name') == interface
@@ -194,7 +195,13 @@ def main():
                     if interfaces:
                         iface = interfaces[0]
                         result[interface] = {
+                            'name': iface.get('name', interface),
                             'public-key': iface.get('public-key', ''),
+                            'running': iface.get('running', 'false'),
+                            'disabled': iface.get('disabled', 'false'),
+                            'listen-port': iface.get('listen-port', '0'),
+                            'mtu': iface.get('mtu', '0'),
+                            'comment': iface.get('comment', ''),
                         }
             
             elif action == 'get_all_peers':

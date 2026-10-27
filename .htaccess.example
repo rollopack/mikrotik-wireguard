@@ -38,3 +38,24 @@ SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 <FilesMatch "^\.">
     Require all denied
 </FilesMatch>
+
+# ──────────────────────────────────────────────────────
+# Compression and caching for static assets
+# ──────────────────────────────────────────────────────
+# CSS/JS URLs on the dashboard carry a version query parameter. These assets
+# can therefore be cached for a year; PHP endpoints set their own no-store
+# headers and are not covered by these rules.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType text/javascript "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 year"
+</IfModule>
+
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css
+    AddOutputFilterByType DEFLATE application/javascript text/javascript application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>

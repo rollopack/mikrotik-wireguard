@@ -107,4 +107,11 @@ class MockMikrotikRestClient implements ClientInterface {
             'comment' => '',
         ];
     }
+
+    public function getPeersAndInterface(): array {
+        return [
+            'peers' => $this->getPeers(),
+            'interface' => $this->getInterfaceStatus(),
+        ];
+    }
 }

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.1] - 2026-10-27
+- **Performance**: dashboard delivery no longer waits for RouterOS; peers and interface status load asynchronously in one dashboard response.
+- **Performance**: modal markup and QR generation load on demand; REST peer requests project only required fields and static assets are compressed and cached.
+- **Changed**: Outfit fonts are self-hosted, and asset URLs change when deployed static files change.
+- **Fixed**: peer activation and confirmed deactivation show progress immediately; cancelling peer creation no longer reloads the peer list.
+
 ## [2.6.0] - 2026-10-16
 - **Added**: header badge now shows the WireGuard listen port, but only when it differs from the port in the configured endpoint.
 - **Added**: "?" button in the header opening an About popup with the app version and the README, rendered locally by a dependency-free Markdown renderer that starts at the Configuration section.

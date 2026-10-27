@@ -17,14 +17,12 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 
-require_once __DIR__ . '/src/ClientFactory.php';
 require_once __DIR__ . '/src/WireGuardManager.php';
 require_once __DIR__ . '/src/i18n.php';
 require_once __DIR__ . '/src/ConfigValidator.php';
 require_once __DIR__ . '/src/auth.php';
 require_once __DIR__ . '/src/ConfigManager.php';
 require_once __DIR__ . '/src/AppInfo.php';
-require_once __DIR__ . '/src/MarkdownRenderer.php';
 
 $config = require __DIR__ . '/config.php';
 
@@ -48,23 +46,14 @@ $currentServerKey = $config['_server_key'];
 $currentServerName = $availableServers[$currentServerKey]['name'] ?? $currentServerKey;
 
 $cspNonce = base64_encode(random_bytes(16));
-header("Content-Security-Policy: default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'nonce-{$cspNonce}'; img-src 'self' data:;");
+header("Content-Security-Policy: default-src 'self'; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'nonce-{$cspNonce}'; img-src 'self' data:;");
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 
 $lang = loadLanguage($config['lang'] ?? 'en');
 
-// About dialog content: version from VERSION, README rendered from Markdown.
-$appVersion = AppInfo::version();
-$readmePath = __DIR__ . '/README.md';
-$readmeHtml = is_file($readmePath)
-    ? MarkdownRenderer::render((string)file_get_contents($readmePath), [
-        'link_base' => AppInfo::repositoryUrl() . '/blob/main/',
-        // Skip the installation-oriented sections (title, features, quick
-        // start, deployment) and open the About content on Configuration.
-        'from_heading' => 'Configuration',
-    ])
-    : '';
+$assetVersionValue = AppInfo::assetVersion();
+$assetVersion = rawurlencode($assetVersionValue);
 
 try {
     $maxPeers = WireGuardManager::maxPeers($config['subnet'], $config['server_ip']);
@@ -72,16 +61,10 @@ try {
     $maxPeers = '?';
 }
 
-// Test connection to CHR and keep the peers for the initial table render.
-// $initialPeers stays null on failure so the frontend knows to fetch instead.
-$connectionError = null;
-$initialPeers = null;
-try {
-    $client = ClientFactory::create($config);
-    $initialPeers = $client->getPeers();
-} catch (Exception $e) {
-    $connectionError = $e->getMessage();
-}
+// No RouterOS request happens while rendering this page: the peer list and the
+// interface status arrive from src/api.php?action=get_peers, so the document
+// (and the CSS/JS/fonts) can be delivered and painted immediately.
+// Modals are fetched on demand from src/modal.php.
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo $config['lang'] ?? 'en'; ?>">
@@ -90,20 +73,17 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo t($lang, 'site.title'); ?></title>
     <meta name="description" content="<?php echo t($lang, 'site.description'); ?>">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/app.css">
+    <!-- Self-hosted Outfit webfont: no third-party request on the critical path -->
+    <link rel="preload" href="assets/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="assets/css/fonts.css?v=<?php echo $assetVersion; ?>">
+    <link rel="stylesheet" href="assets/css/app.css?v=<?php echo $assetVersion; ?>">
 </head>
 <body>
 
-    <?php if ($connectionError !== null): ?>
-        <div class="banner banner-danger" id="errorBanner" role="alert">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
-            <span><?php printf(t($lang, 'banner.api_error'), '<strong>' . htmlspecialchars($connectionError) . '</strong>'); ?></span>
-        </div>
-    <?php endif; ?>
+    <div class="banner banner-danger" id="errorBanner" role="alert" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+        <span id="errorBannerText"></span>
+    </div>
 
     <main class="container">
         <!-- Header -->
@@ -114,7 +94,7 @@ try {
             </div>
 
             <div class="status-badge">
-                <span class="status-dot <?php echo $connectionError !== null ? 'error' : 'active'; ?>"></span>
+                <span class="status-dot" id="statusDot"></span>
                 <span><?php echo t($lang, 'header.router_chr'); ?> <strong><?php echo htmlspecialchars($config['host']); ?></strong> <span id="wgInterfaceLabel" style="display:none;"></span></span>
                 <?php
                     $apiMode = $config['api_mode'] ?? 'rest';
@@ -230,300 +210,8 @@ try {
         </div>
     </main>
 
-    <!-- Add Peer Modal -->
-    <div class="modal-backdrop" id="addModalBackdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="addModalHeading">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-heading" id="addModalHeading"><?php echo t($lang, 'modal.add.title'); ?></h2>
-                <button class="close-btn" data-action="close-modal" data-modal="addModalBackdrop" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
-            </div>
-
-            <form id="addPeerForm">
-                <div class="modal-body">
-                    <div id="modalFormContent">
-                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.25rem;">
-                            <?php echo t($lang, 'modal.add.description'); ?>
-                        </p>
-                        <div class="form-group">
-                            <label for="peerName"><?php echo t($lang, 'modal.add.label_name'); ?></label>
-                            <input type="text" id="peerName" placeholder="<?php echo t($lang, 'modal.add.placeholder_name'); ?>" required autocomplete="off">
-                        </div>
-                    </div>
-
-                    <!-- Result display after creation -->
-                    <div id="modalResultContent" style="display: none;">
-                        <div class="success-card">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-                            <div class="success-card-content">
-                                <h4><?php echo t($lang, 'modal.add.success_title'); ?></h4>
-                                <p><?php echo t($lang, 'modal.add.success_desc'); ?></p>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label><?php echo t($lang, 'modal.add.label_ip'); ?></label>
-                            <div class="peer-ip-badge" id="resIp" style="font-size: 1rem; padding: 0.35rem 0.75rem;">-</div>
-                        </div>
-
-                            <div class="tab-buttons">
-                                <button type="button" class="tab-btn active" data-action="add-tab" data-tab="conf"><?php echo t($lang, 'modal.add.tab_conf'); ?></button>
-                                <button type="button" class="tab-btn" data-action="add-tab" data-tab="script"><?php echo t($lang, 'modal.add.tab_script'); ?></button>
-                                <button type="button" class="tab-btn" id="addQrTab" data-action="add-tab" data-tab="qrcode" disabled><?php echo t($lang, 'modal.add.tab_qrcode'); ?></button>
-                            </div>
-
-                        <div id="tab-conf" class="tab-content active">
-                            <div class="code-box">
-                                <button type="button" class="copy-btn-code" data-action="copy-code" data-target="code-conf-text" title="<?php echo t($lang, 'modal.add.copy_title'); ?>" aria-label="<?php echo t($lang, 'modal.add.copy_title'); ?>">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75A1.125 1.125 0 0 1 4.875 9.75H8.25m2.25 2.25h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75c0-.621.504-1.125 1.125-1.125Z" /></svg>
-                                </button>
-                                <pre id="code-conf-text"></pre>
-                            </div>
-                            <button type="button" class="btn btn-primary btn-sm" id="btnDownloadConf" style="width: 100%;">
-                                <?php echo t($lang, 'modal.add.download_conf'); ?>
-                            </button>
-                        </div>
-
-                        <div id="tab-script" class="tab-content">
-                            <div class="code-box">
-                                <button type="button" class="copy-btn-code" data-action="copy-code" data-target="code-script-text" title="<?php echo t($lang, 'modal.add.copy_title'); ?>" aria-label="<?php echo t($lang, 'modal.add.copy_title'); ?>">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75A1.125 1.125 0 0 1 4.875 9.75H8.25m2.25 2.25h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75c0-.621.504-1.125 1.125-1.125Z" /></svg>
-                                </button>
-                                <pre id="code-script-text"></pre>
-                            </div>
-                            <button type="button" class="btn btn-secondary btn-sm" id="btnDownloadScript" style="width: 100%;">
-                                <?php echo t($lang, 'modal.add.download_script'); ?>
-                            </button>
-                        </div>
-
-                        <div id="tab-qrcode" class="tab-content">
-                            <div class="qr-code-panel">
-                                <div id="addQrCode" class="qr-code-frame" role="status"></div>
-                                <p><?php echo t($lang, 'modal.qrcode.description'); ?></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer" id="modalFooterActions">
-                    <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="addModalBackdrop"><?php echo t($lang, 'modal.add.cancel'); ?></button>
-                    <button type="submit" class="btn btn-primary" id="btnSubmitAdd" data-orig-text="<?php echo t($lang, 'modal.add.submit'); ?>"><?php echo t($lang, 'modal.add.submit'); ?></button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Edit Name Modal -->
-    <div class="modal-backdrop" id="editModalBackdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="editModalHeading">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-heading" id="editModalHeading"><?php echo t($lang, 'modal.edit.title'); ?></h2>
-                <button class="close-btn" data-action="close-modal" data-modal="editModalBackdrop" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
-            </div>
-
-            <form id="editPeerForm">
-                <input type="hidden" id="editPeerId">
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="editPeerName"><?php echo t($lang, 'modal.edit.label_name'); ?></label>
-                        <input type="text" id="editPeerName" required autocomplete="off">
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="editModalBackdrop"><?php echo t($lang, 'modal.edit.cancel'); ?></button>
-                    <button type="submit" class="btn btn-primary"><?php echo t($lang, 'modal.edit.submit'); ?></button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Delete Confirm Modal -->
-    <div class="modal-backdrop" id="deleteModalBackdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="deleteModalHeading">
-        <div class="modal" style="max-width: 450px;">
-            <div class="modal-header">
-                <h2 class="modal-heading" id="deleteModalHeading" style="color: var(--danger);"><?php echo t($lang, 'modal.delete.title'); ?></h2>
-                <button class="close-btn" data-action="close-modal" data-modal="deleteModalBackdrop" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
-            </div>
-
-            <div class="modal-body">
-                <p><?php printf(t($lang, 'modal.delete.confirm'), '<strong id="deletePeerNameText" style="color: var(--danger);"></strong>'); ?></p>
-                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">
-                    <?php echo t($lang, 'modal.delete.description'); ?>
-                </p>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="deleteModalBackdrop"><?php echo t($lang, 'modal.delete.cancel'); ?></button>
-                <button type="button" class="btn btn-danger" id="btnConfirmDelete" data-action="confirm-delete"><?php echo t($lang, 'modal.delete.submit'); ?></button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Confirm Modal (generic) -->
-    <div class="modal-backdrop" id="confirmModalBackdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="confirmModalHeading">
-        <div class="modal" style="max-width: 450px;">
-            <div class="modal-header">
-                <h2 class="modal-heading" id="confirmModalHeading" style="color: var(--warning);"><?php echo t($lang, 'modal.confirm.title'); ?></h2>
-                <button class="close-btn" data-action="close-modal" data-modal="confirmModalBackdrop" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
-            </div>
-
-            <div class="modal-body">
-                <p id="confirmModalText"></p>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="confirmModalBackdrop"><?php echo t($lang, 'modal.confirm.cancel'); ?></button>
-                <button type="button" class="btn btn-warning" id="btnConfirmAction" data-action="confirm-action"><?php echo t($lang, 'modal.confirm.submit'); ?></button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Export Config Modal -->
-    <div class="modal-backdrop" id="exportModalBackdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="exportModalHeading">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-heading" id="exportModalHeading"><?php echo t($lang, 'modal.export.title'); ?></h2>
-                <button class="close-btn" data-action="close-modal" data-modal="exportModalBackdrop" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
-            </div>
-
-            <div class="modal-body">
-                    <div class="form-row-inline">
-                    <div class="form-group" style="flex:1;">
-                        <label><?php echo t($lang, 'modal.export.label_ip'); ?></label>
-                        <div class="peer-ip-badge" id="exportIp" style="font-size: 1rem; padding: 0.35rem 0.75rem;">-</div>
-                    </div>
-                    <div class="form-group" style="flex:1;">
-                        <label><?php echo t($lang, 'modal.export.label_port'); ?></label>
-                        <div class="peer-ip-badge" id="exportPort" style="font-size: 1rem; padding: 0.35rem 0.75rem;">-</div>
-                    </div>
-                </div>
-
-                <div style="text-align:center; margin-bottom:1.25rem;">
-                    <button class="btn btn-warning btn-sm" id="btnRegenerateKey" data-action="regenerate-key" style="width:100%;">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
-                        <?php echo t($lang, 'modal.export.regenerate_btn'); ?>
-                    </button>
-                    <p style="color:var(--text-muted); font-size:0.8rem; margin-top:0.5rem;">
-                        <?php echo t($lang, 'modal.export.regenerate_desc'); ?>
-                    </p>
-                </div>
-
-                <div id="exportConfigSection" style="display:none;">
-                    <div class="tab-buttons">
-                        <button type="button" class="tab-btn" id="tabBtnExportConf" data-action="export-tab" data-tab="conf"><?php echo t($lang, 'modal.export.tab_conf'); ?></button>
-                        <button type="button" class="tab-btn" id="tabBtnExportScript" data-action="export-tab" data-tab="script"><?php echo t($lang, 'modal.export.tab_script'); ?></button>
-                        <button type="button" class="tab-btn" id="tabBtnExportQr" data-action="export-tab" data-tab="qrcode" disabled><?php echo t($lang, 'modal.export.tab_qrcode'); ?></button>
-                    </div>
-
-                    <div id="tab-export-conf" class="tab-content">
-                        <div class="code-box">
-                            <button type="button" class="copy-btn-code" data-action="copy-code" data-target="code-export-conf-text" title="<?php echo t($lang, 'modal.add.copy_title'); ?>" aria-label="<?php echo t($lang, 'modal.add.copy_title'); ?>">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75A1.125 1.125 0 0 1 4.875 9.75H8.25m2.25 2.25h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75c0-.621.504-1.125 1.125-1.125Z" /></svg>
-                            </button>
-                            <pre id="code-export-conf-text"></pre>
-                        </div>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnDownloadExportConf" style="width: 100%;">
-                            <?php echo t($lang, 'modal.export.download_conf'); ?>
-                        </button>
-                    </div>
-
-                    <div id="tab-export-script" class="tab-content">
-                        <div class="code-box">
-                            <button type="button" class="copy-btn-code" data-action="copy-code" data-target="code-export-script-text" title="<?php echo t($lang, 'modal.add.copy_title'); ?>" aria-label="<?php echo t($lang, 'modal.add.copy_title'); ?>">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75A1.125 1.125 0 0 1 4.875 9.75H8.25m2.25 2.25h9.75c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125v-9.75c0-.621.504-1.125 1.125-1.125Z" /></svg>
-                            </button>
-                            <pre id="code-export-script-text"></pre>
-                        </div>
-                        <button type="button" class="btn btn-secondary btn-sm" id="btnDownloadExportScript" style="width: 100%;">
-                            <?php echo t($lang, 'modal.export.download_script'); ?>
-                        </button>
-                    </div>
-
-                    <div id="tab-export-qrcode" class="tab-content">
-                        <div class="qr-code-panel">
-                            <div id="exportQrCode" class="qr-code-frame" role="status"></div>
-                            <p><?php echo t($lang, 'modal.qrcode.description'); ?></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="exportModalBackdrop"><?php echo t($lang, 'modal.export.close'); ?></button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Export VPN IPs Modal -->
-    <div class="modal-backdrop" id="exportVpnIpsModalBackdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="exportVpnIpsModalHeading">
-        <div class="modal" style="max-width:450px;">
-            <div class="modal-header">
-                <h2 class="modal-heading" id="exportVpnIpsModalHeading"><?php echo t($lang, 'modal.export_vpn.title'); ?></h2>
-                <button class="close-btn" data-action="close-modal" data-modal="exportVpnIpsModalBackdrop" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:1.25rem;">
-                    <?php echo t($lang, 'modal.export_vpn.description'); ?>
-                </p>
-                <div style="display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1.25rem;">
-                    <div style="display:flex; align-items:center; gap:0.75rem;">
-                        <input type="checkbox" id="includeSstpCheck" style="width:18px;height:18px;accent-color:var(--primary); flex-shrink:0;">
-                        <label for="includeSstpCheck" style="margin:0; display:inline; font-size:0.9rem; color:var(--text-muted); cursor:pointer;"><?php echo t($lang, 'modal.export_vpn.include_sstp'); ?></label>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:0.75rem;">
-                        <input type="checkbox" id="includePptpCheck" style="width:18px;height:18px;accent-color:var(--primary); flex-shrink:0;">
-                        <label for="includePptpCheck" style="margin:0; display:inline; font-size:0.9rem; color:var(--text-muted); cursor:pointer;"><?php echo t($lang, 'modal.export_vpn.include_pptp'); ?></label>
-                    </div>
-                </div>
-                <div id="exportVpnIpsResult" style="display:none; margin-top:1rem;">
-                    <div class="success-card">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
-                        <div class="success-card-content">
-                            <h4><?php echo t($lang, 'modal.export_vpn.success_title'); ?></h4>
-                            <p><?php echo t($lang, 'modal.export_vpn.stats_wg'); ?> <span id="exportVpnIpsWgCount">0</span> &mdash; <?php echo t($lang, 'modal.export_vpn.stats_sstp'); ?> <span id="exportVpnIpsSstpCount">0</span> &mdash; <?php echo t($lang, 'modal.export_vpn.stats_pptp'); ?> <span id="exportVpnIpsPptpCount">0</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer" id="exportVpnIpsFooter">
-                <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="exportVpnIpsModalBackdrop"><?php echo t($lang, 'modal.export_vpn.cancel'); ?></button>
-                <button type="button" class="btn btn-primary" id="btnExportVpnIps" data-action="export-vpn-ips">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:16px;height:16px;margin-right:4px;vertical-align:middle;"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
-                    <?php echo t($lang, 'modal.export_vpn.download'); ?>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- About Modal -->
-    <div class="modal-backdrop" id="aboutModalBackdrop" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="aboutModalHeading">
-        <div class="modal modal-about">
-            <div class="modal-header">
-                <h2 class="modal-heading" id="aboutModalHeading"><?php echo t($lang, 'about.title'); ?></h2>
-                <button class="close-btn" data-action="close-modal" data-modal="aboutModalBackdrop" aria-label="<?php echo t($lang, 'modal.close'); ?>">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="about-meta">
-                    <strong><?php echo t($lang, 'header.title'); ?></strong> &middot; <?php echo t($lang, 'about.version'); ?> <?php echo htmlspecialchars($appVersion); ?>
-                </p>
-                <p class="about-meta">
-                    <a href="<?php echo htmlspecialchars(AppInfo::repositoryUrl()); ?>" target="_blank" rel="noopener noreferrer"><?php echo t($lang, 'about.repository'); ?></a>
-                </p>
-                <div class="about-markdown">
-                    <?php
-                        if ($readmeHtml !== '') {
-                            echo $readmeHtml;
-                        } else {
-                            echo '<p>' . t($lang, 'about.readme_unavailable') . '</p>';
-                        }
-                    ?>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="aboutModalBackdrop"><?php echo t($lang, 'modal.close'); ?></button>
-            </div>
-        </div>
-    </div>
+    <!-- Modals are fetched on demand by app.js (src/modal.php) -->
+    <div id="modalHost"></div>
 
     <!-- Toast Notification -->
     <div class="toast" id="toast" role="status" aria-live="polite">
@@ -533,7 +221,6 @@ try {
 
     <script nonce="<?php echo $cspNonce; ?>">
         const AppConfig = {
-            initialPeers: <?php echo json_encode($initialPeers, JSON_UNESCAPED_UNICODE); ?>,
             endpointPort: <?php echo json_encode(WireGuardManager::extractEndpointPort($config['endpoint'] ?? '')); ?>,
             dnatBase: <?php echo json_encode($config['dnat_base'] ?? 30000); ?>,
             dnatMultiplier: <?php echo json_encode($config['dnat_multiplier'] ?? 1000); ?>,
@@ -546,9 +233,9 @@ try {
             exportMode: <?php echo json_encode($config['export_mode'] ?? 'rsc'); ?>,
             showDnatColumn: <?php echo json_encode($config['show_dnat_column'] ?? false); ?>,
             showTrafficColumn: <?php echo json_encode($config['show_traffic_column'] ?? true); ?>,
+            assetVersion: <?php echo json_encode($assetVersionValue); ?>,
         };
     </script>
-    <script src="assets/js/qrcode-generator.min.js"></script>
-    <script src="assets/js/app.js"></script>
+    <script src="assets/js/app.js?v=<?php echo $assetVersion; ?>" defer></script>
 </body>
 </html>

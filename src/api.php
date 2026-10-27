@@ -30,6 +30,7 @@ $client = ClientFactory::create($config);
 $manager = new WireGuardManager($client, $config);
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store');
 
 // Reject an unknown ?server= instead of silently falling back to the default
 // config (checked via ConfigManager, shared with src/public-api.php).
@@ -47,10 +48,12 @@ if (!isset($_GET['action'])) {
 
 try {
     if ($_GET['action'] === 'get_peers') {
+        // One backend round trip: peers and interface status together.
+        $snapshot = $client->getPeersAndInterface();
         echo json_encode([
             'success' => true,
-            'peers' => $manager->getPeers(),
-            'server_public_key' => $manager->getServerPublicKey()
+            'peers' => $snapshot['peers'],
+            'interface' => $snapshot['interface'],
         ]);
         exit;
     }
