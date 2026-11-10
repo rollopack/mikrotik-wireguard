@@ -37,6 +37,7 @@ function switchServer(serverKey) {
 
 /* ── State ──────────────────────────────────────────────────── */
 let allPeers = [];
+let peerMutationVersion = 0;
 let peerToDeleteId = null;
 let currentSort = { field: 'name', dir: 'asc' };
 let hideOffline = localStorage.getItem('hideOffline') !== 'false';
@@ -145,10 +146,12 @@ function initPeers() {
 
 async function loadPeers() {
     const loader = document.getElementById('tableLoader');
+    const requestMutationVersion = peerMutationVersion;
     loader.classList.add('active');
     try {
         const res = await fetch(apiUrl('get_peers'));
         const data = await res.json();
+        if (requestMutationVersion !== peerMutationVersion) return;
         if (data.success) {
             currentPage = 1;
             // Resolve the pending highlight first: the render below paints it.
@@ -168,9 +171,11 @@ async function loadPeers() {
 
 // Auto-refresh: silent, no loader flicker
 async function refreshPeers() {
+    const requestMutationVersion = peerMutationVersion;
     try {
         const res = await fetch(apiUrl('get_peers'));
         const data = await res.json();
+        if (requestMutationVersion !== peerMutationVersion) return;
         if (data.success) {
             applyDashboardData(data);
         }
@@ -185,6 +190,29 @@ function applyDashboardData(data) {
     clearConnectionError();
     if (data.interface) updateInterfaceStatusUI(data.interface);
     applyFiltersAndSort();
+}
+
+// Apply successful mutations to the current snapshot instead of fetching the
+// full peer table again. A refresh remains the fallback if the peer is absent.
+function updatePeerLocally(id, updates, highlightIp = null) {
+    peerMutationVersion++;
+    const peer = allPeers.find(p => p['.id'] === id);
+    if (!peer) return false;
+
+    Object.assign(peer, updates);
+    if (highlightIp) highlightId = highlightIp;
+    applyFiltersAndSort();
+    return true;
+}
+
+function removePeerLocally(id) {
+    peerMutationVersion++;
+    const remainingPeers = allPeers.filter(p => p['.id'] !== id);
+    if (remainingPeers.length === allPeers.length) return false;
+
+    allPeers = remainingPeers;
+    applyFiltersAndSort();
+    return true;
 }
 
 function highlightPendingPeer() {
@@ -775,6 +803,7 @@ async function submitAddPeer(event) {
 
     const data = await apiPost('add_peer', { name: nameInput.value });
     if (data.success) {
+        peerMutationVersion++;
         showToast(t('js.peer_created'));
         pendingHighlightId = data.peer.ip;
         addPeerCreated = true;
@@ -923,17 +952,61 @@ function closeEditModal() {
     closeModal('editModalBackdrop');
 }
 
+function setEditPeerSaving(form, isSaving) {
+    const button = form.querySelector('button[type="submit"]');
+    if (!button) return;
+
+    if (isSaving) {
+        form.dataset.saving = 'true';
+        if (button.dataset.originalLabel === undefined) {
+            button.dataset.originalLabel = button.textContent;
+        }
+        button.disabled = true;
+        button.setAttribute('aria-busy', 'true');
+        form.setAttribute('aria-busy', 'true');
+        button.innerHTML = `<span class="spinner spinner-inline" aria-hidden="true"></span> ${escapeHtml(t('js.saving'))}`;
+        return;
+    }
+
+    delete form.dataset.saving;
+    if (button.dataset.originalLabel !== undefined) {
+        button.textContent = button.dataset.originalLabel;
+        delete button.dataset.originalLabel;
+    }
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+    form.removeAttribute('aria-busy');
+}
+
 async function submitEditPeer(event) {
     event.preventDefault();
+    const form = event.target;
+    if (form.dataset.saving === 'true') return;
+
     const id = document.getElementById('editPeerId').value;
     const name = document.getElementById('editPeerName').value;
-    const data = await apiPost('update_peer', { id, name });
+    setEditPeerSaving(form, true);
+
+    let data;
+    try {
+        data = await apiPost('update_peer', { id, name });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        showToast(t('js.update_error').replace('%s', message || t('js.connection_error')), true);
+        return;
+    } finally {
+        setEditPeerSaving(form, false);
+    }
+
     if (data.success) {
         showToast(t('js.peer_updated'));
         const editedPeer = allPeers.find(p => p['.id'] === id);
-        pendingHighlightId = editedPeer ? (editedPeer['allowed-address'] || '').split('/')[0] : null;
+        const highlightIp = editedPeer ? (editedPeer['allowed-address'] || '').split('/')[0] : null;
         closeEditModal();
-        loadPeers();
+        if (!updatePeerLocally(id, { name }, highlightIp)) {
+            pendingHighlightId = highlightIp;
+            loadPeers();
+        }
     } else {
         showToast(t('js.update_error').replace('%s', data.error), true);
     }
@@ -972,7 +1045,7 @@ async function submitDeletePeer(id) {
     if (data.success) {
         showToast(t('js.peer_deleted'));
         closeDeleteModal();
-        loadPeers();
+        if (!removePeerLocally(id)) loadPeers();
     } else {
         showToast(t('js.delete_error').replace('%s', data.error), true);
     }
@@ -1020,7 +1093,7 @@ async function togglePeer(id, currentlyDisabled, button) {
             const data = await apiPost('toggle_peer', { id, disabled: newDisabled });
             if (data.success) {
                 showToast(newDisabled ? t('js.peer_disabled') : t('js.peer_enabled'));
-                await loadPeers();
+                if (!updatePeerLocally(id, { disabled: newDisabled })) await loadPeers();
             } else {
                 showToast(t('js.toggle_error').replace('%s', data.error), true);
             }

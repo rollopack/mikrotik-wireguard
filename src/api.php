@@ -23,6 +23,12 @@ try {
 
 requireAuth();
 
+$readOnlyActions = ['get_peers', 'get_interface_status', 'check_session'];
+if (in_array($_GET['action'] ?? null, $readOnlyActions, true)
+    && session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
+
 $lang = loadLanguage($config['lang'] ?? 'en');
 
 
@@ -72,6 +78,9 @@ try {
     }
 
     requireCsrf();
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
 
     if ($_GET['action'] === 'add_peer') {
         $input = json_decode(file_get_contents('php://input'), true);

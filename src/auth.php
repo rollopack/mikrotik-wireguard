@@ -147,7 +147,8 @@ function isLoggedIn(): bool
         return false;
     }
 
-    $timeout = 1800;
+    // Idle sessions expire after 60 minutes of inactivity.
+    $timeout = 3600;
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity']) > $timeout) {
         logout();
         return false;

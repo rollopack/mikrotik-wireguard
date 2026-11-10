@@ -78,6 +78,8 @@ class MikrotikRestClientTest extends TestCase {
                   'current-endpoint-address', 'disabled', 'rx', 'tx'] as $field) {
             $this->assertTrue(in_array($field, $fields, true), "PEER_FIELDS is missing {$field}");
         }
+        $this->assertFalse(in_array('public-key', $fields, true),
+            'The dashboard peer list must not request a public key it does not render');
     }
 
     public function testPeersAndInterfaceCombinesBothPayloads(): void {

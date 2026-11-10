@@ -147,7 +147,7 @@ Winbox connection: `CHR_IP:30024`
   - Alternative: `php -r "echo password_hash('your_pass', PASSWORD_BCRYPT);" > .admin-hash && chmod 600 .admin-hash`
   - Until a password is set, every page redirects to `setup.php`
   - After setup, all pages (`index.php`, `api.php`) require login; unauthenticated API calls return `401 Unauthorized`
-  - Session timeout: 30 minutes of inactivity
+  - Session timeout: 60 minutes of inactivity
 - **display_errors disabled** in production — no PHP error leakage
 - **Brute-force protection** — login locked for 5 minutes after 5 failed attempts
 - **Intended for LAN use only** — do not expose to the Internet without additional security layers

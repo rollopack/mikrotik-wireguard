@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.2] - 2026-11-10
+- **Performance**: renaming, enabling, disabling and deleting a peer update the row already on screen instead of refetching the whole peer list; an in-flight refresh can no longer overwrite the change.
+- **Performance**: the API releases the PHP session lock before contacting RouterOS, so concurrent dashboard requests no longer wait for each other.
+- **Performance**: REST peer queries no longer transfer the public key, which the dashboard never displays.
+- **Fixed**: renaming a peer shows a saving indicator with a disabled button until the router confirms; on failure the dialog stays open and the form can be submitted again.
+- **Changed**: idle sessions now expire after 60 minutes of inactivity.
+- **Tests**: regression coverage for local peer updates, stale refresh handling, session-lock ordering, peer projection and rename feedback.
+
 ## [2.6.1] - 2026-10-27
 - **Performance**: dashboard delivery no longer waits for RouterOS; peers and interface status load asynchronously in one dashboard response.
 - **Performance**: modal markup and QR generation load on demand; REST peer requests project only required fields and static assets are compressed and cached.

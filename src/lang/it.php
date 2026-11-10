@@ -180,6 +180,7 @@ return [
     'js.edit_title'           => 'Modifica Nome',
     'js.delete_title'         => 'Elimina peer',
     'js.creating'             => 'Creazione...',
+    'js.saving'               => 'Salvataggio...',
     'js.peer_created'         => 'Peer WireGuard aggiunto con successo!',
     'js.create_error'         => 'Errore durante la creazione: %s',
     'js.file_downloaded'      => 'File %s scaricato!',

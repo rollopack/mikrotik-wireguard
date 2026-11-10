@@ -6,7 +6,7 @@ class MikrotikRestClient implements ClientInterface {
     /** Fields the dashboard needs from every peer (RouterOS `.proplist`). */
     private const PEER_FIELDS = [
         '.id', 'name', 'interface', 'allowed-address', 'last-handshake',
-        'current-endpoint-address', 'public-key', 'disabled', 'rx', 'tx',
+        'current-endpoint-address', 'disabled', 'rx', 'tx',
     ];
 
     /** Fields needed for IP allocation across interfaces. */

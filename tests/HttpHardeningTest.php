@@ -86,4 +86,30 @@ class HttpHardeningTest extends TestCase {
 
         $this->assertTrue(str_contains($api, "header('Cache-Control: no-store')"));
     }
+
+    public function testApiReleasesSessionLockBeforeReadOnlyRouterRequests(): void {
+        $api = file_get_contents(__DIR__ . '/../src/api.php');
+        $authPosition = strpos($api, 'requireAuth();');
+        $closePosition = strpos($api, 'session_write_close();');
+        $readPosition = strpos($api, '$client->getPeersAndInterface()');
+
+        $this->assertTrue($authPosition !== false && $closePosition > $authPosition,
+            'Read-only requests must authenticate before releasing their session lock');
+        $this->assertTrue($readPosition !== false && $closePosition < $readPosition,
+            'The session lock must be released before querying RouterOS');
+        $this->assertTrue(str_contains($api, "'get_peers', 'get_interface_status', 'check_session'"),
+            'All authenticated read-only actions must release the session lock');
+    }
+
+    public function testApiReleasesSessionLockAfterCsrfValidationForWrites(): void {
+        $api = file_get_contents(__DIR__ . '/../src/api.php');
+        $csrfPosition = strpos($api, 'requireCsrf();');
+        $closePosition = strpos($api, 'session_write_close();', $csrfPosition ?: 0);
+        $writePosition = strpos($api, '$manager->addPeer(');
+
+        $this->assertTrue($csrfPosition !== false && $closePosition > $csrfPosition,
+            'Write requests must validate CSRF before releasing their session lock');
+        $this->assertTrue($writePosition !== false && $closePosition < $writePosition,
+            'The session lock must be released before performing a RouterOS write');
+    }
 }
